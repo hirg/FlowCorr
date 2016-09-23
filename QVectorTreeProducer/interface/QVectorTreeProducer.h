@@ -28,6 +28,20 @@
 #include "FWCore/Framework/interface/MakerMacros.h"
 
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
+#include "FWCore/Utilities/interface/InputTag.h"
+
+#include "DataFormats/TrackReco/interface/Track.h"
+#include "DataFormats/TrackReco/interface/TrackFwd.h"
+
+#include "DataFormats/VertexReco/interface/Vertex.h"
+#include "DataFormats/VertexReco/interface/VertexFwd.h"
+
+#include "DataFormats/HeavyIonEvent/interface/CentralityBins.h"
+#include "DataFormats/HeavyIonEvent/interface/Centrality.h"
+
+#include "DataFormats/CaloTowers/interface/CaloTower.h"
+#include "DataFormats/CaloTowers/interface/CaloTowerFwd.h"
+
 //
 // class declaration
 //
@@ -52,6 +66,50 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<edm::one::SharedResource
       virtual void endJob() override;
 
       // ----------member data ---------------------------
+      edm::EDGetTokenT<reco::TrackCollection>  trackToken_;
+      std::string                              trackQualityTag_;
+      edm::EDGetTokenT<reco::VertexCollection> vtxToken_;
+      edm::EDGetTokenT<reco::Centrality>       centralityToken_;
+      edm::EDGetTokenT<int>                    centralityBinToken_;
+      edm::EDGetTokenT<CaloTowerCollection>    caloTowerToken_;
+
+      // ## global for evt sel ##
+      int NoffMin_;
+      int NoffMax_;
+      int CentMin_;
+      int CentMax_;
+      // ## vertex ##
+      float MinVz_;
+      float MaxVz_;
+      float MaxRho_;
+      float MinEta_;
+      float MaxEta_;
+      int nVtxMax_;	
+      float xVtx_;
+      float yVtx_;
+      float zVtx_;
+      float xVtxError_;
+      float yVtxError_;
+      float zVtxError_;
+      int nVtx_;	
+      // ## tracks ##
+      float dzdzError_;
+      float d0d0Error_;
+      //double Chi2_;
+      float PtErrorPt_;
+      //int Charge_;
+      float PtMin_;
+      float PtMax_;
+      // ## calotower ##
+      float Etmin_;
+      // ## cumulant ##
+      int cMode_;
+      bool cWeight_;
+      // ## gap ##
+      float Gap_;
+
+      unsigned int nHarm_;
+      std::vector<int> vHarm_;
 };
 
 //
