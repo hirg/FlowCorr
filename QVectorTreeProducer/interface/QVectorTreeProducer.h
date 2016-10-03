@@ -84,8 +84,6 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<edm::one::SharedResource
       float MinVz_;
       float MaxVz_;
       float MaxRho_;
-      float MinEta_;
-      float MaxEta_;
       int nVtxMax_;	
       float xVtx_;
       float yVtx_;
@@ -97,11 +95,14 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<edm::one::SharedResource
       // ## tracks ##
       float dzdzError_;
       float d0d0Error_;
-      //double Chi2_;
+      float MinEta_;
+      float MaxEta_;
       float PtErrorPt_;
-      //int Charge_;
+      //double Chi2n_;
       float PtMin_;
       float PtMax_;
+      //int Charge_;
+      //std::vector<int> trkAlgo_;
       // ## calotower ##
       float Etmin_;
       // ## cumulant ##
@@ -116,21 +117,12 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<edm::one::SharedResource
       // ## output tree and histograms ##
       TTree* flowTree_;
 
-      int noff_;
-      int nref_;
+      int nOff_;
+      int nRef_;
 
       // ---------- public methods ------------
-      bool isEventSelected(const edm::Event& iEvent);
+      bool isEventSelected(const edm::Event& iEvent, 
+                           edm::Handle< reco::VertexCollection > vertices,
+                           edm::Handle< reco::TrackCollection > tracks);
+
 };
-
-//
-// constants, enums and typedefs
-//
-
-//
-// static data member definitions
-//
-
-//
-// constructors and destructor
-//
