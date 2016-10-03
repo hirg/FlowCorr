@@ -42,6 +42,8 @@
 #include "DataFormats/CaloTowers/interface/CaloTower.h"
 #include "DataFormats/CaloTowers/interface/CaloTowerFwd.h"
 
+#include <TComplex.h>
+#include <TTree.h>
 //
 // class declaration
 //
@@ -65,7 +67,7 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<edm::one::SharedResource
       virtual void analyze(const edm::Event&, const edm::EventSetup&) override;
       virtual void endJob() override;
 
-      // ----------member data ---------------------------
+      // ---------- member data -----------
       edm::EDGetTokenT<reco::TrackCollection>  trackToken_;
       std::string                              trackQualityTag_;
       edm::EDGetTokenT<reco::VertexCollection> vtxToken_;
@@ -110,6 +112,15 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<edm::one::SharedResource
 
       unsigned int nHarm_;
       std::vector<int> vHarm_;
+
+      // ## output tree and histograms ##
+      TTree* flowTree_;
+
+      int noff_;
+      int nref_;
+
+      // ---------- public methods ------------
+      bool isEventSelected(const edm::Event& iEvent);
 };
 
 //
