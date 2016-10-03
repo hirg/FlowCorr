@@ -54,7 +54,7 @@
 // constructor "usesResource("TFileService");"
 // This will improve performance in multithreaded jobs.
 
-class QVectorTreeProducer : public edm::one::EDAnalyzer<edm::one::SharedResources>  {
+class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
    public:
       explicit QVectorTreeProducer(const edm::ParameterSet&);
       ~QVectorTreeProducer();
@@ -75,54 +75,79 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<edm::one::SharedResource
       edm::EDGetTokenT<int>                    centralityBinToken_;
       edm::EDGetTokenT<CaloTowerCollection>    caloTowerToken_;
 
+
       // ## global for evt sel ##
+      int Cent_;
+      int nOff_;
+      int nRef_;
       int NoffMin_;
       int NoffMax_;
       int CentMin_;
       int CentMax_;
+
       // ## vertex ##
-      float MinVz_;
-      float MaxVz_;
-      float MaxRho_;
+      double MinVz_;
+      double MaxVz_;
+      double MaxRho_;
       int nVtxMax_;	
-      float xVtx_;
-      float yVtx_;
-      float zVtx_;
-      float xVtxError_;
-      float yVtxError_;
-      float zVtxError_;
-      int nVtx_;	
-      // ## tracks ##
-      float dzdzError_;
-      float d0d0Error_;
-      float MinEta_;
-      float MaxEta_;
-      float PtErrorPt_;
-      //double Chi2n_;
-      float PtMin_;
-      float PtMax_;
-      //int Charge_;
-      //std::vector<int> trkAlgo_;
+      double xVtx_;
+      double yVtx_;
+      double zVtx_;
+      double xVtxError_;
+      double yVtxError_;
+      double zVtxError_;
+      int nVtx_;
+	
+      // ## offline tracks ##
+      double MinEtaOff_;
+      double MaxEtaOff_;
+      double MinPtOff_;
+      double MaxPtOff_;
+      std::vector<int> ChargeOff_;
+      bool isPixelTrackingOff_;
+      double dzdzErrorOff_;
+      double d0d0ErrorOff_;
+      double PtErrorPtOff_;
+      double Chi2nOff_;
+      int nHitsOff_;
+      std::vector<int> trkAlgoOff_;
+      // ## ref tracks ##
+      double MinEtaRef_;
+      double MaxEtaRef_;
+      double MinPtRef_;
+      double MaxPtRef_;
+      std::vector<int> ChargeRef_;
+      bool isPixelTrackingRef_;
+      double dzdzErrorRef_;
+      double d0d0ErrorRef_;
+      double PtErrorPtRef_;
+      double Chi2nRef_;
+      int nHitsRef_;
+      std::vector<int> trkAlgoRef_;
+
       // ## calotower ##
-      float Etmin_;
+      double Etmin_;
+
       // ## cumulant ##
       int cMode_;
       bool cWeight_;
-      // ## gap ##
-      float Gap_;
 
+      // ## gap ##
+      double Gap_;
+
+      // ## harmonics ##
       unsigned int nHarm_;
       std::vector<int> vHarm_;
 
       // ## output tree and histograms ##
       TTree* flowTree_;
 
-      int nOff_;
-      int nRef_;
-
       // ---------- public methods ------------
       bool isEventSelected(const edm::Event& iEvent, 
                            edm::Handle< reco::VertexCollection > vertices,
+                           int hiBin,
                            edm::Handle< reco::TrackCollection > tracks);
-
+      void getNoff(edm::Handle< reco::TrackCollection > tracks);
+      bool isGoodTrack(const reco::Track & trk);
 };
+
