@@ -2,7 +2,7 @@ import FWCore.ParameterSet.Config as cms
 
 flowCorr = cms.EDAnalyzer('QVectorTreeProducer',
      #tracks
-     tracks       = cms.untracked.InputTag('hiGeneralTracks'),
+     tracks       = cms.InputTag('hiGeneralTracks'),
      trackQuality = cms.untracked.string('highpurity'),
      noffmin      = cms.untracked.int32(0),
      noffmax      = cms.untracked.int32(10000),
@@ -12,7 +12,7 @@ flowCorr = cms.EDAnalyzer('QVectorTreeProducer',
      minPtOff     = cms.untracked.double(0.4),
      maxPtOff     = cms.untracked.double(99999.),
      chargeOff    = cms.untracked.vint32(-1,1),
-     isPixTrkOff  = cms.untracked.bool(false),
+     isPixTrkOff  = cms.untracked.bool(False),
      dzdzErrorOff = cms.untracked.double(3.0),
      d0d0ErrorOff = cms.untracked.double(3.0),
      ptErrorPtOff = cms.untracked.double(0.1),
@@ -25,7 +25,7 @@ flowCorr = cms.EDAnalyzer('QVectorTreeProducer',
      minPtRef     = cms.untracked.double(0.3),
      maxPtRef     = cms.untracked.double(3.0),
      chargeRef    = cms.untracked.vint32(-1,1),
-     isPixTrkRef  = cms.untracked.bool(false),
+     isPixTrkRef  = cms.untracked.bool(False),
      dzdzErrorRef = cms.untracked.double(3.0),
      d0d0ErrorRef = cms.untracked.double(3.0),
      ptErrorPtRef = cms.untracked.double(0.1),
@@ -34,18 +34,18 @@ flowCorr = cms.EDAnalyzer('QVectorTreeProducer',
      trkAlgoRef   = cms.untracked.vint32(4,5,6,7),
 
      #vertex
-     vertex  = cms.untracked.InputTag('hiSelectedVertex'),
+     vertex  = cms.InputTag('hiSelectedVertex'),
      minVz   = cms.untracked.double(-15.0),
      maxVz   = cms.untracked.double(15.0),
      maxRho  = cms.untracked.double(0.2),
      nVtxMax = cms.untracked.int32(9999),
 
      #calotower
-     caloTowers = cms.InputTag('towerMaker'),
+     caloTower = cms.InputTag('towerMaker'),
 
      #centrality
-     centralitySrc    = cms.untracked.InputTag('hiCentrality'),
-     centralityBinSrc = cms.untracked.InputTage('centralityBin','HFtowers'),
+     centralitySrc    = cms.InputTag('hiCentrality'),
+     centralityBinSrc = cms.untracked.InputTag('centralityBin','HFtowers'),
      minCent          = cms.untracked.int32(-1),
      maxCent          = cms.untracked.int32(-1),
 

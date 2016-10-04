@@ -66,7 +66,7 @@ QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
    MaxRho_(iConfig.getUntrackedParameter<double>("maxRho", 0.2)),
    nVtxMax_(iConfig.getUntrackedParameter<int>("nVtxMax", 9999)),
 // #CaloTower
-   caloTowerToken_(consumes<CaloTowerCollection>(iConfig.getParameter<edm::InputTag>("calotower"))),
+   caloTowerToken_(consumes<CaloTowerCollection>(iConfig.getParameter<edm::InputTag>("caloTower"))),
 // #Centrality
    centralityToken_(consumes<reco::Centrality>(iConfig.getParameter<edm::InputTag>("centralitySrc"))),
    centralityBinToken_(consumes<int>(iConfig.getUntrackedParameter<edm::InputTag>("centralityBinSrc"))),
@@ -173,7 +173,7 @@ QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
    }
    else
    {
-       edm::LogWarning ("Invalid value") <<"Invalid EP value";
+       edm::LogWarning ("Invalid value") <<"Invalid EP value: " << (*evtPlanes)[6].angle(epLvl_);
    }
                                 
    edm::Handle<reco::EvtPlaneCollection> evtPlanesFlat;
@@ -184,7 +184,7 @@ QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
    }   
    else
    {
-       edm::LogWarning ("Invalid value") <<"Invalid EP value";
+       edm::LogWarning ("Invalid value") <<"Invalid EP Flat value";
    }
 
 
@@ -195,6 +195,7 @@ QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
    for(reco::TrackCollection::const_iterator itTrk = tracks->begin(); itTrk != tracks->end(); ++itTrk)
    {
       if(!isGoodTrack(*itTrk)) continue;
+      nRef_++;
    }
 
    flowTree_->Fill();
