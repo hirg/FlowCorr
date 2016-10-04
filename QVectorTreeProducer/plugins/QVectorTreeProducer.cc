@@ -28,19 +28,12 @@
 #include "FlowCorr/QVectorTreeProducer/interface/QVectorTreeProducer.h"
 
 QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
-// #General info and tags
+// #Tracks
    trackToken_(consumes<reco::TrackCollection>(iConfig.getParameter<edm::InputTag>("tracks"))),
    trackQualityTag_(iConfig.getUntrackedParameter<std::string>("trackQuality","highPurity")),
-   vtxToken_(consumes<reco::VertexCollection>(iConfig.getParameter<edm::InputTag>("vertex"))),
-   centralityToken_(consumes<reco::Centrality>(iConfig.getParameter<edm::InputTag>("centralitySrc"))),
-   centralityBinToken_(consumes<int>(iConfig.getUntrackedParameter<edm::InputTag>("centralityBinSrc"))),
-   caloTowerToken_(consumes<CaloTowerCollection>(iConfig.getParameter<edm::InputTag>("calotower"))),
-// #Vertex
-   MinVz_(iConfig.getUntrackedParameter<double>("minVz",-15.)),
-   MaxVz_(iConfig.getUntrackedParameter<double>("maxVz", 15.)),
-   MaxRho_(iConfig.getUntrackedParameter<double>("maxRho", 0.2)),
-   nVtxMax_(iConfig.getUntrackedParameter<int>("nVtxMax", 9999)),
-// #Offline tracks (noff)
+   MinNoff_(iConfig.getUntrackedParameter<int>("minNoff",0)),
+   MaxNoff_(iConfig.getUntrackedParameter<int>("maxNoff", 9999)),
+// -- #Offline tracks (noff)
    MinEtaOff_(iConfig.getUntrackedParameter<double>("minEtaOff",-2.4)),
    MaxEtaOff_(iConfig.getUntrackedParameter<double>("maxEtaOff", 2.4)),
    MinPtOff_(iConfig.getUntrackedParameter<double>("minPtOff",0.4)),
@@ -49,11 +42,11 @@ QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
    isPixelTrackingOff_(iConfig.getUntrackedParameter<bool>("isPixTrkOff", 9999.)),
    dzdzErrorOff_(iConfig.getUntrackedParameter<double>("dzdzErrorOff", 3.)),
    d0d0ErrorOff_(iConfig.getUntrackedParameter<double>("d0d0ErrorOff", 3.)),
-   PtErrorPtOff_(iConfig.getUntrackedParameter<double>("PtErrorPtOff", 1.)),
-   Chi2nOff_(iConfig.getUntrackedParameter<double>("Chi2nOff", 0.)),
+   PtErrorPtOff_(iConfig.getUntrackedParameter<double>("ptErrorPtOff", 1.)),
+   Chi2nOff_(iConfig.getUntrackedParameter<double>("chi2nOff", 0.)),
    nHitsOff_(iConfig.getUntrackedParameter<int>("nHitsOff", 9999)),
    trkAlgoOff_(iConfig.getUntrackedParameter< std::vector<int> >("trkAlgoOff")),
-// #Reference tracks (nref)
+// -- #Reference tracks (nref)
    MinEtaRef_(iConfig.getUntrackedParameter<double>("minEtaRef",-2.4)),
    MaxEtaRef_(iConfig.getUntrackedParameter<double>("maxEtaRef", 2.4)),
    MinPtRef_(iConfig.getUntrackedParameter<double>("minPtRef",0.4)),
@@ -62,10 +55,27 @@ QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
    isPixelTrackingRef_(iConfig.getUntrackedParameter<bool>("isPixTrkRef", 9999.)),
    dzdzErrorRef_(iConfig.getUntrackedParameter<double>("dzdzErrorRef", 3.)),
    d0d0ErrorRef_(iConfig.getUntrackedParameter<double>("d0d0ErrorRef", 3.)),
-   PtErrorPtRef_(iConfig.getUntrackedParameter<double>("PtErrorPtRef", 1.)),
-   Chi2nRef_(iConfig.getUntrackedParameter<double>("Chi2nRef", 0.)),
+   PtErrorPtRef_(iConfig.getUntrackedParameter<double>("ptErrorPtRef", 1.)),
+   Chi2nRef_(iConfig.getUntrackedParameter<double>("chi2nRef", 0.)),
    nHitsRef_(iConfig.getUntrackedParameter<int>("nHitsRef", 9999)),
-   trkAlgoRef_(iConfig.getUntrackedParameter< std::vector<int> >("trkAlgoRef"))
+   trkAlgoRef_(iConfig.getUntrackedParameter< std::vector<int> >("trkAlgoRef")),
+// #Vertex
+   vtxToken_(consumes<reco::VertexCollection>(iConfig.getParameter<edm::InputTag>("vertex"))),
+   MinVz_(iConfig.getUntrackedParameter<double>("minVz",-15.)),
+   MaxVz_(iConfig.getUntrackedParameter<double>("maxVz", 15.)),
+   MaxRho_(iConfig.getUntrackedParameter<double>("maxRho", 0.2)),
+   nVtxMax_(iConfig.getUntrackedParameter<int>("nVtxMax", 9999)),
+// #CaloTower
+   caloTowerToken_(consumes<CaloTowerCollection>(iConfig.getParameter<edm::InputTag>("calotower"))),
+// #Centrality
+   centralityToken_(consumes<reco::Centrality>(iConfig.getParameter<edm::InputTag>("centralitySrc"))),
+   centralityBinToken_(consumes<int>(iConfig.getUntrackedParameter<edm::InputTag>("centralityBinSrc"))),
+   MinCent_(iConfig.getUntrackedParameter<int>("minCent", -1)),
+   MaxCent_(iConfig.getUntrackedParameter<int>("maxCent", -1)),
+// #Event plane
+   evtPlaneTag_(consumes<reco::EvtPlaneCollection>(iConfig.getParameter<edm::InputTag>("evtPlane"))),
+   evtPlaneFlatTag_(consumes<reco::EvtPlaneCollection>(iConfig.getParameter<edm::InputTag>("evtPlaneFlat"))),
+   epLvl_(iConfig.getUntrackedParameter<int>("epLvl", 2))
 {
    //now do what ever initialization is needed
    edm::Service<TFileService> fs;
@@ -128,8 +138,8 @@ QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
    //----- Centrality selection ----
    edm::Handle< int > cbin;
    iEvent.getByToken(centralityBinToken_,cbin);
-   int hiBin = *cbin;
-   if(hiBin < 0) 
+   Cent_ = *cbin;
+   if(Cent_ < 0) 
    { 
        edm::LogWarning ("Invalid value") <<"Invalid centrality value";
        return; 
@@ -138,9 +148,48 @@ QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
    edm::Handle< reco::Centrality > centrality;
    iEvent.getByToken(centralityToken_, centrality);
 
-   
+   //----- Event Plane selection ----
+   //Index     Name   Detector Order hmin1 hmax1 hmin2 hmax2 minpt maxpt
+   //    0      HFm1        HF     1 -5.00 -3.00  0.00  0.00  0.01 30.00
+   //    1      HFp1        HF     1  3.00  5.00  0.00  0.00  0.01 30.00
+   //    2       HF1        HF     1 -5.00 -3.00  3.00  5.00  0.01 30.00
+   //    6      HFm2        HF     2 -5.00 -3.00  0.00  0.00  0.01 30.00
+   //    7      HFp2        HF     2  3.00  5.00  0.00  0.00  0.01 30.00
+   //    8       HF2        HF     2 -5.00 -3.00  3.00  5.00  0.01 30.00
+   //   13      HFm3        HF     3 -5.00 -3.00  0.00  0.00  0.01 30.00
+   //   14      HFp3        HF     3  3.00  5.00  0.00  0.00  0.01 30.00
+   //   15       HF3        HF     3 -5.00 -3.00  3.00  5.00  0.01 30.00
+   //   19      HFm4        HF     4 -5.00 -3.00  0.00  0.00  0.01 30.00
+   //   20      HFp4        HF     4  3.00  5.00  0.00  0.00  0.01 30.00
+   //   21       HF4        HF     4 -5.00 -3.00  3.00  5.00  0.01 30.00
+   //   25    HFm1mc        HF     1 -5.00 -3.00  0.00  0.00  0.01 30.00
+   //   26    HFp1mc        HF     1  3.00  5.00  0.00  0.00  0.01 30.00
+
+   edm::Handle<reco::EvtPlaneCollection> evtPlanes;
+   iEvent.getByToken(evtPlaneTag_, evtPlanes);
+   if(evtPlanes.isValid())
+   {
+      //double anglem2 = (*evtPlanes)[6].angle(epLvl_);
+   }
+   else
+   {
+       edm::LogWarning ("Invalid value") <<"Invalid EP value";
+   }
+                                
+   edm::Handle<reco::EvtPlaneCollection> evtPlanesFlat;
+   iEvent.getByToken(evtPlaneFlatTag_, evtPlanesFlat);
+   if(evtPlanesFlat.isValid())
+   {
+      //double anglem2Flat = (*evtPlanesFlat)[6].angle();
+   }   
+   else
+   {
+       edm::LogWarning ("Invalid value") <<"Invalid EP value";
+   }
+
+
    //----- Event selection -----
-   if(!isEventSelected(iEvent, vertices, hiBin, tracks)) return;
+   if(!isEventSelected(iEvent, vertices, tracks)) return;
 
    nRef_ = 0;
    for(reco::TrackCollection::const_iterator itTrk = tracks->begin(); itTrk != tracks->end(); ++itTrk)
@@ -179,13 +228,12 @@ QVectorTreeProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptio
 bool
 QVectorTreeProducer::isEventSelected(const edm::Event& iEvent, 
                                      edm::Handle< reco::VertexCollection > vertices,
-                                     int hiBin, 
                                      edm::Handle< reco::TrackCollection >  tracks) 
 {
    // ## Vertex ##
    //--- Vertex info 
    nVtx_ = 0;
-   const reco::Vertex & bestVtx = (*vertices)[0];
+   const reco::Vertex & bestVtx = *(vertices->begin());
     
    if(!bestVtx.isFake() && bestVtx.tracksSize()>=2)
    {
@@ -210,14 +258,14 @@ QVectorTreeProducer::isEventSelected(const edm::Event& iEvent,
  
  
    // ## Centrality selection ##
-   if((hiBin < 2*CentMin_ || hiBin >= 2*CentMax_) &&
-      (CentMin_ != -1 && CentMax_ != -1)) 
+   if((Cent_ < 2*MinCent_ || Cent_ >= 2*MaxCent_) &&
+      (MaxCent_ != -1 && MaxCent_ != -1)) 
                                         return false;
  
  
    // ## Multiplicity ##
    getNoff(tracks); 
-   if(nOff_ < NoffMin_ || nOff_ > NoffMax_) return false;
+   if(nOff_ < MinNoff_ || nOff_ > MaxNoff_) return false;
  
  
    return true;

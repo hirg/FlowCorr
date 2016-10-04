@@ -36,8 +36,10 @@
 #include "DataFormats/VertexReco/interface/Vertex.h"
 #include "DataFormats/VertexReco/interface/VertexFwd.h"
 
-#include "DataFormats/HeavyIonEvent/interface/CentralityBins.h"
+//#include "DataFormats/HeavyIonEvent/interface/CentralityBins.h"
 #include "DataFormats/HeavyIonEvent/interface/Centrality.h"
+#include "DataFormats/HeavyIonEvent/interface/EvtPlane.h"
+
 
 #include "DataFormats/CaloTowers/interface/CaloTower.h"
 #include "DataFormats/CaloTowers/interface/CaloTowerFwd.h"
@@ -68,37 +70,13 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
       virtual void endJob() override;
 
       // ---------- member data -----------
-      edm::EDGetTokenT<reco::TrackCollection>  trackToken_;
-      std::string                              trackQualityTag_;
-      edm::EDGetTokenT<reco::VertexCollection> vtxToken_;
-      edm::EDGetTokenT<reco::Centrality>       centralityToken_;
-      edm::EDGetTokenT<int>                    centralityBinToken_;
-      edm::EDGetTokenT<CaloTowerCollection>    caloTowerToken_;
-
-
-      // ## global for evt sel ##
-      int Cent_;
-      int nOff_;
-      int nRef_;
-      int NoffMin_;
-      int NoffMax_;
-      int CentMin_;
-      int CentMax_;
-
-      // ## vertex ##
-      double MinVz_;
-      double MaxVz_;
-      double MaxRho_;
-      int nVtxMax_;	
-      double xVtx_;
-      double yVtx_;
-      double zVtx_;
-      double xVtxError_;
-      double yVtxError_;
-      double zVtxError_;
-      int nVtx_;
-	
-      // ## offline tracks ##
+      // ~~~> Config parameters <~~~ 
+      // ## tracks ##
+      edm::EDGetTokenT<reco::TrackCollection> trackToken_;
+      std::string                             trackQualityTag_;
+      int MinNoff_;
+      int MaxNoff_;
+      // -- ## offline tracks ##
       double MinEtaOff_;
       double MaxEtaOff_;
       double MinPtOff_;
@@ -111,7 +89,7 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
       double Chi2nOff_;
       int nHitsOff_;
       std::vector<int> trkAlgoOff_;
-      // ## ref tracks ##
+      // -- ## ref tracks ##
       double MinEtaRef_;
       double MaxEtaRef_;
       double MinPtRef_;
@@ -125,8 +103,49 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
       int nHitsRef_;
       std::vector<int> trkAlgoRef_;
 
+      // ## vertex ##
+      edm::EDGetTokenT<reco::VertexCollection>   vtxToken_;
+      double MinVz_;
+      double MaxVz_;
+      double MaxRho_;
+      int nVtxMax_;
+
+      // ## calotower ##
+      edm::EDGetTokenT<CaloTowerCollection> caloTowerToken_;
+
+      // ## centrality ##	
+      edm::EDGetTokenT<reco::Centrality> centralityToken_;
+      edm::EDGetTokenT<int>              centralityBinToken_;
+      int MinCent_;
+      int MaxCent_;
+
+      // ## event plane ##
+      edm::EDGetTokenT<reco::EvtPlaneCollection> evtPlaneTag_;
+      edm::EDGetTokenT<reco::EvtPlaneCollection> evtPlaneFlatTag_;
+      int epLvl_;
+
+
+      // ~~~> Class parameters <~~~ 
+      // ## tracks ##
+      int nOff_;
+      int nRef_;
+
+      // ## vertex ##
+      double xVtx_;
+      double yVtx_;
+      double zVtx_;
+      double xVtxError_;
+      double yVtxError_;
+      double zVtxError_;
+      int nVtx_;
+
       // ## calotower ##
       double Etmin_;
+
+      // ## centrality ##
+      int Cent_;
+      
+      // ## event plane ##
 
       // ## cumulant ##
       int cMode_;
@@ -145,7 +164,6 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
       // ---------- public methods ------------
       bool isEventSelected(const edm::Event& iEvent, 
                            edm::Handle< reco::VertexCollection > vertices,
-                           int hiBin,
                            edm::Handle< reco::TrackCollection > tracks);
       void getNoff(edm::Handle< reco::TrackCollection > tracks);
       bool isGoodTrack(const reco::Track & trk);
