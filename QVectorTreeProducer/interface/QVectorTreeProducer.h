@@ -40,12 +40,14 @@
 #include "DataFormats/HeavyIonEvent/interface/Centrality.h"
 #include "DataFormats/HeavyIonEvent/interface/EvtPlane.h"
 
-
 #include "DataFormats/CaloTowers/interface/CaloTower.h"
 #include "DataFormats/CaloTowers/interface/CaloTowerFwd.h"
 
 #include <TComplex.h>
 #include <TTree.h>
+
+class FlowEPangle;
+
 //
 // class declaration
 //
@@ -146,6 +148,9 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
       int Cent_;
       
       // ## event plane ##
+      FlowEPangle HFmPsi_;
+      FlowEPangle HFpPsi_;
+      FlowEPangle HFPsi_;
 
       // ## cumulant ##
       int cMode_;

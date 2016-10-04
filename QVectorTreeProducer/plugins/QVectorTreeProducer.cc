@@ -25,6 +25,7 @@
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
+#include "FlowCorr/QVectorTreeProducer/interface/FlowEPangle.h"
 #include "FlowCorr/QVectorTreeProducer/interface/QVectorTreeProducer.h"
 
 QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
@@ -74,14 +75,17 @@ QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
    MaxCent_(iConfig.getUntrackedParameter<int>("maxCent", -1)),
 // #Event plane
    evtPlaneTag_(consumes<reco::EvtPlaneCollection>(iConfig.getParameter<edm::InputTag>("evtPlane"))),
-   evtPlaneFlatTag_(consumes<reco::EvtPlaneCollection>(iConfig.getParameter<edm::InputTag>("evtPlaneFlat"))),
    epLvl_(iConfig.getUntrackedParameter<int>("epLvl", 2))
 {
+   HFmPsi_ = FlowEPangle();
+   HFpPsi_ = FlowEPangle();
+   HFPsi_  = FlowEPangle(); 
+
    //now do what ever initialization is needed
    edm::Service<TFileService> fs;
 
    flowTree_ = fs->make<TTree>("flowTree", "flowTree");
-   flowTree_->Branch("cent", &Cent_, "cent/D");
+   flowTree_->Branch("cent", &Cent_, "cent/I");
    flowTree_->Branch("noff", &nOff_, "noff/I");
    flowTree_->Branch("nref", &nRef_, "nref/I");
    flowTree_->Branch("nVtx", &nVtx_, "nVtx/I");
@@ -136,18 +140,20 @@ QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
    }
 
    //----- Centrality selection ----
+   edm::Handle< reco::Centrality > centrality;
+   iEvent.getByToken(centralityToken_, centrality);
+
    edm::Handle< int > cbin;
    iEvent.getByToken(centralityBinToken_,cbin);
    Cent_ = *cbin;
+   std::cout << "Centrality = " << Cent_ << " | " << *cbin << std::endl; 
+   std::cout << "bounds = " << MinCent_ << " - " << MaxCent_ << std::endl; 
    if(Cent_ < 0) 
    { 
        edm::LogWarning ("Invalid value") <<"Invalid centrality value";
        return; 
    }
    
-   edm::Handle< reco::Centrality > centrality;
-   iEvent.getByToken(centralityToken_, centrality);
-
    //----- Event Plane selection ----
    //Index     Name   Detector Order hmin1 hmax1 hmin2 hmax2 minpt maxpt
    //    0      HFm1        HF     1 -5.00 -3.00  0.00  0.00  0.01 30.00
@@ -164,29 +170,26 @@ QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
    //   21       HF4        HF     4 -5.00 -3.00  3.00  5.00  0.01 30.00
    //   25    HFm1mc        HF     1 -5.00 -3.00  0.00  0.00  0.01 30.00
    //   26    HFp1mc        HF     1  3.00  5.00  0.00  0.00  0.01 30.00
+   int HFm[4] = {0, 6, 13, 19};
+   int HFp[4] = {1, 7, 14, 20};
+   int HF[4]  = {2, 8, 15, 21};
+
 
    edm::Handle<reco::EvtPlaneCollection> evtPlanes;
    iEvent.getByToken(evtPlaneTag_, evtPlanes);
    if(evtPlanes.isValid())
    {
-      //double anglem2 = (*evtPlanes)[6].angle(epLvl_);
+      for(int iharm = 1; iharm < 5; iharm++)
+      {
+         HFmPsi_.fillEPangle((*evtPlanes)[HFm[iharm]].angle(epLvl_), iharm);
+         HFpPsi_.fillEPangle((*evtPlanes)[HFp[iharm]].angle(epLvl_), iharm);
+         HFPsi_.fillEPangle((*evtPlanes)[HF[iharm]].angle(epLvl_), iharm);
+      }
    }
    else
    {
-       edm::LogWarning ("Invalid value") <<"Invalid EP value: " << (*evtPlanes)[6].angle(epLvl_);
+       edm::LogWarning ("Invalid value") << "Invalid EP value";
    }
-                                
-   edm::Handle<reco::EvtPlaneCollection> evtPlanesFlat;
-   iEvent.getByToken(evtPlaneFlatTag_, evtPlanesFlat);
-   if(evtPlanesFlat.isValid())
-   {
-      //double anglem2Flat = (*evtPlanesFlat)[6].angle();
-   }   
-   else
-   {
-       edm::LogWarning ("Invalid value") <<"Invalid EP Flat value";
-   }
-
 
    //----- Event selection -----
    if(!isEventSelected(iEvent, vertices, tracks)) return;

@@ -51,7 +51,6 @@ flowCorr = cms.EDAnalyzer('QVectorTreeProducer',
 
      #event plane
      evtPlane     = cms.InputTag('hiEvtPlane'),
-     evtPlaneFlat = cms.InputTag('hiEvtPlaneFlat',''),  
      epLvl        = cms.untracked.int32(0),
 
      #global
