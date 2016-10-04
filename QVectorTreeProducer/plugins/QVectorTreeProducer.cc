@@ -135,6 +135,7 @@ QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
    }
 
    //----- Centrality selection ----
+   Cent_ = -1;
    edm::Handle< reco::Centrality > centrality;
    iEvent.getByToken(centralityToken_, centrality);
 
@@ -144,7 +145,6 @@ QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
    if(Cent_ < 0) 
    { 
        edm::LogWarning ("Invalid value") <<"Invalid centrality value";
-       return; 
    }
    
    //----- Event Plane selection ----
