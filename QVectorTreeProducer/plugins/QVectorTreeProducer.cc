@@ -25,7 +25,6 @@
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
-#include "FlowCorr/QVectorTreeProducer/interface/FlowEPangle.h"
 #include "FlowCorr/QVectorTreeProducer/interface/QVectorTreeProducer.h"
 
 QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
@@ -77,21 +76,17 @@ QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
    evtPlaneTag_(consumes<reco::EvtPlaneCollection>(iConfig.getParameter<edm::InputTag>("evtPlane"))),
    epLvl_(iConfig.getUntrackedParameter<int>("epLvl", 2))
 {
-   HFmPsi_ = FlowEPangle();
-   HFpPsi_ = FlowEPangle();
-   HFPsi_  = FlowEPangle(); 
-
    //now do what ever initialization is needed
    edm::Service<TFileService> fs;
 
    flowTree_ = fs->make<TTree>("flowTree", "flowTree");
-   flowTree_->Branch("cent", &Cent_, "cent/I");
-   flowTree_->Branch("noff", &nOff_, "noff/I");
-   flowTree_->Branch("nref", &nRef_, "nref/I");
-   flowTree_->Branch("nVtx", &nVtx_, "nVtx/I");
-   flowTree_->Branch("xVtx", &xVtx_, "xVtx/D");
-   flowTree_->Branch("yVtx", &yVtx_, "yVtx/D");
-   flowTree_->Branch("zVtx", &zVtx_, "zVtx/D");
+   flowTree_->Branch("cent",       &Cent_,   "cent/I");
+   flowTree_->Branch("noff",       &nOff_,   "noff/I");
+   flowTree_->Branch("nref",       &nRef_,   "nref/I");
+   flowTree_->Branch("Vertex",     &Vtx_,    "xVtx/D:yVtx:zVtx:nVtx/I");
+   flowTree_->Branch("HFmEPangle", &HFmPsi_, "psi1/D:psi2:psi3:psi4");
+   flowTree_->Branch("HFpEPangle", &HFpPsi_, "psi1/D:psi2:psi3:psi4");
+   flowTree_->Branch("HFEPangle",  &HFPsi_,  "psi1/D:psi2:psi3:psi4");
 }
 
 QVectorTreeProducer::~QVectorTreeProducer()
@@ -146,8 +141,6 @@ QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
    edm::Handle< int > cbin;
    iEvent.getByToken(centralityBinToken_,cbin);
    Cent_ = *cbin;
-   std::cout << "Centrality = " << Cent_ << " | " << *cbin << std::endl; 
-   std::cout << "bounds = " << MinCent_ << " - " << MaxCent_ << std::endl; 
    if(Cent_ < 0) 
    { 
        edm::LogWarning ("Invalid value") <<"Invalid centrality value";
@@ -170,21 +163,34 @@ QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
    //   21       HF4        HF     4 -5.00 -3.00  3.00  5.00  0.01 30.00
    //   25    HFm1mc        HF     1 -5.00 -3.00  0.00  0.00  0.01 30.00
    //   26    HFp1mc        HF     1  3.00  5.00  0.00  0.00  0.01 30.00
-   int HFm[4] = {0, 6, 13, 19};
-   int HFp[4] = {1, 7, 14, 20};
-   int HF[4]  = {2, 8, 15, 21};
+   unsigned int HFm[4] = {0, 6, 13, 19};
+   unsigned int HFp[4] = {1, 7, 14, 20};
+   unsigned int HF[4]  = {2, 8, 15, 21};
 
 
    edm::Handle<reco::EvtPlaneCollection> evtPlanes;
    iEvent.getByToken(evtPlaneTag_, evtPlanes);
    if(evtPlanes.isValid())
    {
-      for(int iharm = 1; iharm < 5; iharm++)
-      {
-         HFmPsi_.fillEPangle((*evtPlanes)[HFm[iharm]].angle(epLvl_), iharm);
-         HFpPsi_.fillEPangle((*evtPlanes)[HFp[iharm]].angle(epLvl_), iharm);
-         HFPsi_.fillEPangle((*evtPlanes)[HF[iharm]].angle(epLvl_), iharm);
-      }
+      //psi1
+      if(HFm[0] < evtPlanes->size()) HFmPsi_.psi1 = (*evtPlanes)[HFm[0]].angle(epLvl_);
+      if(HFp[0] < evtPlanes->size()) HFpPsi_.psi1 = (*evtPlanes)[HFp[0]].angle(epLvl_);
+      if(HF[0]  < evtPlanes->size()) HFPsi_.psi1  = (*evtPlanes)[HF[0]].angle(epLvl_);
+
+      //psi2
+      if(HFm[1] < evtPlanes->size()) HFmPsi_.psi2 = (*evtPlanes)[HFm[1]].angle(epLvl_);
+      if(HFp[1] < evtPlanes->size()) HFpPsi_.psi2 = (*evtPlanes)[HFp[1]].angle(epLvl_);
+      if(HF[1]  < evtPlanes->size()) HFPsi_.psi2  = (*evtPlanes)[HF[1]].angle(epLvl_);
+
+      //psi3
+      if(HFm[2] < evtPlanes->size()) HFmPsi_.psi3 = (*evtPlanes)[HFm[2]].angle(epLvl_);
+      if(HFp[2] < evtPlanes->size()) HFpPsi_.psi3 = (*evtPlanes)[HFp[2]].angle(epLvl_);
+      if(HF[2]  < evtPlanes->size()) HFPsi_.psi3  = (*evtPlanes)[HF[2]].angle(epLvl_);
+
+      //psi4
+      if(HFm[3] < evtPlanes->size()) HFmPsi_.psi4 = (*evtPlanes)[HFm[3]].angle(epLvl_);
+      if(HFp[3] < evtPlanes->size()) HFpPsi_.psi4 = (*evtPlanes)[HFp[3]].angle(epLvl_);
+      if(HF[3]  < evtPlanes->size()) HFPsi_.psi4  = (*evtPlanes)[HF[3]].angle(epLvl_);
    }
    else
    {
@@ -193,7 +199,7 @@ QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
 
    //----- Event selection -----
    if(!isEventSelected(iEvent, vertices, tracks)) return;
-
+  
    nRef_ = 0;
    for(reco::TrackCollection::const_iterator itTrk = tracks->begin(); itTrk != tracks->end(); ++itTrk)
    {
@@ -236,29 +242,33 @@ QVectorTreeProducer::isEventSelected(const edm::Event& iEvent,
 {
    // ## Vertex ##
    //--- Vertex info 
-   nVtx_ = 0;
    const reco::Vertex & bestVtx = *(vertices->begin());
+
+   Vtx_.xVtx = 0.;
+   Vtx_.yVtx = 0.;
+   Vtx_.zVtx = 0.;
+   Vtx_.nVtx = 0;
     
    if(!bestVtx.isFake() && bestVtx.tracksSize()>=2)
    {
-      xVtx_ = bestVtx.x();
-      yVtx_ = bestVtx.y();
-      zVtx_ = bestVtx.z();
+      Vtx_.xVtx = bestVtx.x();
+      Vtx_.yVtx = bestVtx.y();
+      Vtx_.zVtx = bestVtx.z();
       xVtxError_ = bestVtx.xError();
       yVtxError_ = bestVtx.yError();
       zVtxError_ = bestVtx.zError();
    }
-   double rho = sqrt(xVtx_*xVtx_ + yVtx_*yVtx_);
+   double rho = sqrt(Vtx_.xVtx*Vtx_.xVtx + Vtx_.yVtx*Vtx_.yVtx);
  
    for(reco::VertexCollection::const_iterator itVtx = vertices->begin(); itVtx != vertices->end(); ++itVtx)
    {
-       if(!itVtx->isFake() && itVtx->tracksSize() >= 2) nVtx_++;
+       if(!itVtx->isFake() && itVtx->tracksSize() >= 2) Vtx_.nVtx++;
    }
  
    //--- Vertex selection 
-   if(nVtx_ > nVtxMax_)                 return false;
-   if(zVtx_ < MinVz_ || zVtx_ > MaxVz_) return false;
-   if(rho > MaxRho_ )                   return false;
+   if(Vtx_.nVtx > nVtxMax_)                     return false;
+   if(Vtx_.zVtx < MinVz_ || Vtx_.zVtx > MaxVz_) return false;
+   if(rho > MaxRho_ )                           return false;
  
  
    // ## Centrality selection ##
@@ -284,7 +294,7 @@ QVectorTreeProducer::getNoff(edm::Handle< reco::TrackCollection > tracks)
    {
       //--- Multiplicity info (nOff)
       // Select tracks based on proximity to best vertex
-      math::XYZPoint bestVtxPoint(xVtx_,yVtx_,zVtx_);
+      math::XYZPoint bestVtxPoint(Vtx_.xVtx,Vtx_.yVtx,Vtx_.zVtx);
  
       double  dzvtx   = itTrk->dz(bestVtxPoint);
       double  d0vtx   = itTrk->dxy(bestVtxPoint);
@@ -343,7 +353,7 @@ QVectorTreeProducer::isGoodTrack(const reco::Track & trk)
 {
    //--- Multiplicity info (nRef)
    // Select tracks based on proximity to best vertex
-   math::XYZPoint bestVtxPoint(xVtx_,yVtx_,zVtx_);
+   math::XYZPoint bestVtxPoint(Vtx_.xVtx,Vtx_.yVtx,Vtx_.zVtx);
  
    double  dzvtx   = trk.dz(bestVtxPoint);
    double  d0vtx   = trk.dxy(bestVtxPoint);

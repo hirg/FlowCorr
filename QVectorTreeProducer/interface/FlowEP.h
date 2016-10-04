@@ -1,9 +1,11 @@
+#ifndef FLOWEP_H
+#define FLOWEP_H
 // -*- C++ -*-
 //
 // Package:    FlowCorr/QVectorTreeProducer
 // Class:      FlowEP
 // 
-/**\class FlowEPangle FlowEPangle.h FlowCorr/FlowEP/interface/FlowEPangle.h
+/**\class FlowEPangle FlowEP.h FlowCorr/FlowEP/interface/FlowEP.h
 
  Description: [one line class summary]
 
@@ -37,3 +39,5 @@ class FlowEPangle {
 
    private:
 };
+
+#endif

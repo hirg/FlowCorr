@@ -46,7 +46,22 @@
 #include <TComplex.h>
 #include <TTree.h>
 
-class FlowEPangle;
+//
+// typedef
+//
+typedef struct {
+  double xVtx;
+  double yVtx;
+  double zVtx;
+  int nVtx;
+} sVertex;
+
+typedef struct {
+  double psi1;  
+  double psi2;
+  double psi3;
+  double psi4;
+} sFlowEPangle;
 
 //
 // class declaration
@@ -133,13 +148,10 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
       int nRef_;
 
       // ## vertex ##
-      double xVtx_;
-      double yVtx_;
-      double zVtx_;
+      sVertex Vtx_;
       double xVtxError_;
       double yVtxError_;
       double zVtxError_;
-      int nVtx_;
 
       // ## calotower ##
       double Etmin_;
@@ -148,9 +160,9 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
       int Cent_;
       
       // ## event plane ##
-      FlowEPangle HFmPsi_;
-      FlowEPangle HFpPsi_;
-      FlowEPangle HFPsi_;
+      sFlowEPangle HFmPsi_;
+      sFlowEPangle HFpPsi_;
+      sFlowEPangle HFPsi_;
 
       // ## cumulant ##
       int cMode_;

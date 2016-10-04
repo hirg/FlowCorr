@@ -18,7 +18,7 @@
 
 
 // system include files
-#include "FlowCorr/QVectorTreeProducer/interface/FlowEPangle.h"
+#include "FlowCorr/QVectorTreeProducer/interface/FlowEP.h"
 
 FlowEPangle::FlowEPangle() :
 psi1(0.),
