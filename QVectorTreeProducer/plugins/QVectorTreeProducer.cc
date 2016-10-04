@@ -27,6 +27,8 @@
 
 #include "FlowCorr/QVectorTreeProducer/interface/QVectorTreeProducer.h"
 
+#include <TString.h>
+
 QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
 // #Tracks
    trackToken_(consumes<reco::TrackCollection>(iConfig.getParameter<edm::InputTag>("tracks"))),
@@ -74,9 +76,33 @@ QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
    MaxCent_(iConfig.getUntrackedParameter<int>("maxCent", -1)),
 // #Event plane
    evtPlaneTag_(consumes<reco::EvtPlaneCollection>(iConfig.getParameter<edm::InputTag>("evtPlane"))),
-   epLvl_(iConfig.getUntrackedParameter<int>("epLvl", 2))
+   epLvl_(iConfig.getUntrackedParameter<int>("epLvl", 2)),
+// #cumulants
+   cMode_(iConfig.getUntrackedParameter<int>("cMode")),
+   cWeight_(iConfig.getUntrackedParameter<bool>("cWeight")),
+// file acc & eff & fake
+   fName_(iConfig.getUntrackedParameter<edm::InputTag>("fName"))
 {
    //now do what ever initialization is needed
+   //file acc & eff
+   TString filename(fName_.label().c_str());
+   fEff_ = 0x0;
+
+   if(cWeight_ && !filename.IsNull())
+   {
+      edm::FileInPath fip(Form("FlowCorr/QVectorTreeProducer/data/%s",filename.Data()));
+      fEff_ = new TFile(fip.fullPath().c_str(),"READ");
+
+      hEff_.resize(fEff_->GetNkeys());
+      for(int ihist = 0; ihist < fEff_->GetNkeys(); ++ihist)
+      {
+         hEff_.push_back((TH2D*) fEff_->Get(fEff_->GetListOfKeys()->At(ihist)->GetName()));
+      }
+      edm::LogInfo("Input file for accXeff corrections") <<"Using file " << fEff_->GetName();
+   }
+
+
+   //TTree
    edm::Service<TFileService> fs;
 
    flowTree_ = fs->make<TTree>("flowTree", "flowTree");
@@ -94,7 +120,8 @@ QVectorTreeProducer::~QVectorTreeProducer()
  
    // do anything here that needs to be done at desctruction time
    // (e.g. close files, deallocate resources etc.)
-
+   if(fEff_) fEff_->Close();
+   hEff_.clear();
 }
 
 

@@ -53,5 +53,10 @@ flowCorr = cms.EDAnalyzer('QVectorTreeProducer',
      evtPlane     = cms.InputTag('hiEvtPlane'),
      epLvl        = cms.untracked.int32(0),
 
-     #global
+     #cumulant
+     cMode   = cms.untracked.int32(1),
+     cWeight = cms.untracked.bool(True), 
+
+     #file acc x eff x fake
+     fName = cms.untracked.InputTag('EffCorrectionsPixel_TT_pt_0_10_v2.root')
 )

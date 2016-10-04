@@ -45,6 +45,8 @@
 
 #include <TComplex.h>
 #include <TTree.h>
+#include <TFile.h>
+#include <TH2D.h>
 
 //
 // typedef
@@ -165,7 +167,7 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
       sFlowEPangle HFPsi_;
 
       // ## cumulant ##
-      int cMode_;
+      int  cMode_;
       bool cWeight_;
 
       // ## gap ##
@@ -174,6 +176,11 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
       // ## harmonics ##
       unsigned int nHarm_;
       std::vector<int> vHarm_;
+
+      // ## Acc x Eff correction ##
+      TFile * fEff_;
+      std::vector<TH2D*> hEff_;
+      edm::InputTag      fName_;
 
       // ## output tree and histograms ##
       TTree* flowTree_;
