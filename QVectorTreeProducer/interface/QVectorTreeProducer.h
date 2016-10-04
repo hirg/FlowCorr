@@ -3,7 +3,7 @@
 // Package:    FlowCorr/QVectorTreeProducer
 // Class:      QVectorTreeProducer
 // 
-/**\class QVectorTreeProducer QVectorTreeProducer.cc FlowCorr/QVectorTreeProducer/plugins/QVectorTreeProducer.cc
+/**\class QVectorTreeProducer QVectorTreeProducer.h FlowCorr/QVectorTreeProducer/interface/QVectorTreeProducer.h
 
  Description: [one line class summary]
 
