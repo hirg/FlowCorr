@@ -50,13 +50,18 @@ flowCorr = cms.EDAnalyzer('QVectorTreeProducer',
      maxCent          = cms.untracked.int32(-1),
 
      #event plane
-     evtPlane     = cms.InputTag('hiEvtPlane'),
-     epLvl        = cms.untracked.int32(0),
+     evtPlane = cms.InputTag('hiEvtPlane'),
+     epLvl    = cms.untracked.int32(0),
+
+     #harmonics
+     vHarmTrk = cms.untracked.vint32(2,3,4,5,6,7),  
+     vHarmHF  = cms.untracked.vint32(2,3,4,5,6,7),
 
      #cumulant
-     cMode   = cms.untracked.int32(1),
+     cMode   = cms.untracked.int32(2),
      cWeight = cms.untracked.bool(True), 
 
      #file acc x eff x fake
-     fName = cms.untracked.InputTag('EffCorrectionsPixel_TT_pt_0_10_v2.root')
+     fName      = cms.untracked.InputTag('EffCorrectionsPixel_TT_pt_0_10_v2.root'),
+     effCentBin = cms.untracked.vint32(0,5,10,30,50,100)
 )

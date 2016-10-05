@@ -44,5 +44,7 @@ process.TFileService = cms.Service("TFileService",
 
 #Analyzer
 process.load("FlowCorr.QVectorTreeProducer.flowCorr_cfi")
+process.testcumu = process.flowCorr.clone()
 
-process.p = cms.Path(process.newCentralityBin * process.hltMB * process.flowCorr)
+process.p = cms.Path(process.newCentralityBin * process.hltMB * process.testcumu)
+

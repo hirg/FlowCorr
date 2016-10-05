@@ -5,6 +5,6 @@
 <use name="DataFormats/TrackReco"/>
 <use name="DataFormats/VertexReco"/>
 <use name="RecoHI/HiCentralityAlgos"/>
-<use name="FlowCorr/QVectorTreeProducer"/>
-<flags EDM_PLUGIN="1"/>
- <use name="CommonTools/UtilAlgos"/>
+<export>
+   <lib name="1"/>
+</export>

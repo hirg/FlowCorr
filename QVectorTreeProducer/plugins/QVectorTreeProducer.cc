@@ -77,13 +77,30 @@ QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
 // #Event plane
    evtPlaneTag_(consumes<reco::EvtPlaneCollection>(iConfig.getParameter<edm::InputTag>("evtPlane"))),
    epLvl_(iConfig.getUntrackedParameter<int>("epLvl", 2)),
+// #harmonics
+   vHarmTrk_(iConfig.getUntrackedParameter< std::vector<int> >("vHarmTrk")),
+   vHarmHF_(iConfig.getUntrackedParameter< std::vector<int> >("vHarmHF")),
 // #cumulants
    cMode_(iConfig.getUntrackedParameter<int>("cMode")),
    cWeight_(iConfig.getUntrackedParameter<bool>("cWeight")),
 // file acc & eff & fake
-   fName_(iConfig.getUntrackedParameter<edm::InputTag>("fName"))
+   fName_(iConfig.getUntrackedParameter<edm::InputTag>("fName")),
+   effCentBin_(iConfig.getUntrackedParameter< std::vector<int> >("effCentBin"))
 {
    //now do what ever initialization is needed
+   //Qn vectors trk
+   nHarmTrk_ = vHarmTrk_.size();
+   for(unsigned int iharm = 0; iharm < nHarmTrk_; ++iharm)
+   {
+      qNvec_.push_back(correlations::QVector(0, 0, cWeight_));   
+   }
+
+   initDiagQ();
+   qN2_ = new FlowCorrelator(nHarmTrk_);
+   qN4_ = new FlowCorrelator(nHarmTrk_);
+   qN6_ = new FlowCorrelator(nHarmTrk_);
+   qN8_ = new FlowCorrelator(nHarmTrk_);
+
    //file acc & eff
    TString filename(fName_.label().c_str());
    fEff_ = 0x0;
@@ -93,7 +110,6 @@ QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
       edm::FileInPath fip(Form("FlowCorr/QVectorTreeProducer/data/%s",filename.Data()));
       fEff_ = new TFile(fip.fullPath().c_str(),"READ");
 
-      hEff_.resize(fEff_->GetNkeys());
       for(int ihist = 0; ihist < fEff_->GetNkeys(); ++ihist)
       {
          hEff_.push_back((TH2D*) fEff_->Get(fEff_->GetListOfKeys()->At(ihist)->GetName()));
@@ -113,6 +129,10 @@ QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
    flowTree_->Branch("HFmEPangle", &HFmPsi_, "psi1/D:psi2:psi3:psi4");
    flowTree_->Branch("HFpEPangle", &HFpPsi_, "psi1/D:psi2:psi3:psi4");
    flowTree_->Branch("HFEPangle",  &HFPsi_,  "psi1/D:psi2:psi3:psi4");
+   flowTree_->Branch("<2>_n", "FlowCorrelator", &qN2_, 32000, 3);
+   flowTree_->Branch("<4>_n", "FlowCorrelator", &qN4_, 32000, 3);
+   flowTree_->Branch("<6>_n", "FlowCorrelator", &qN6_, 32000, 3);
+   flowTree_->Branch("<8>_n", "FlowCorrelator", &qN8_, 32000, 3);
 }
 
 QVectorTreeProducer::~QVectorTreeProducer()
@@ -232,7 +252,70 @@ QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
    {
       if(!isGoodTrack(*itTrk)) continue;
       nRef_++;
+
+      double pt  = itTrk->pt();
+      double eta = itTrk->eta();
+      double phi = itTrk->phi();
+
+      //Weight calculation from histograms
+      double weight = 1.;
+      if(cWeight_)
+      {
+         if(hEff_.size() != effCentBin_.size() - 1 || effCentBin_.empty())
+         {
+            if(hEff_[0]->GetBinContent(hEff_[0]->FindBin(eta,pt)) != 0.) 
+               weight = 1./hEff_[0]->GetBinContent(hEff_[0]->FindBin(eta,pt));
+            else weight = 0.;
+         }
+         else
+         {
+            weight = 0.;
+            for(unsigned int icent = 0; icent < effCentBin_.size() - 1; ++icent)
+            {
+               if(Cent_ > 2*effCentBin_[icent] && Cent_ <= 2*effCentBin_[icent+1])
+               { 
+                  if(hEff_[icent]->GetBinContent(hEff_[icent]->FindBin(eta,pt)) != 0.) 
+                     weight = 1./hEff_[icent]->GetBinContent(hEff_[icent]->FindBin(eta,pt));
+                  else weight = 0.;
+                  break;
+               }
+            }
+         }
+      }
+
+      //Filling Qvectors
+      for(unsigned int iharm = 0; iharm < nHarmTrk_; ++iharm)
+      {
+         qNvec_[iharm].fill(phi, weight);
+      }
    }
+
+   //Calculate correlators
+   correlations::Result rN2; 
+   correlations::Result rN4;
+   correlations::Result rN6;
+   correlations::Result rN8;
+   if(nHarmTrk_ != 0)
+   {
+      for(unsigned int iharm = 0; iharm < nHarmTrk_; ++iharm)
+      {
+         rN2 = cqNvec_[iharm]->calculate(2, hcNvec_[iharm]);
+         rN4 = cqNvec_[iharm]->calculate(4, hcNvec_[iharm]);
+         rN6 = cqNvec_[iharm]->calculate(6, hcNvec_[iharm]);
+         rN8 = cqNvec_[iharm]->calculate(8, hcNvec_[iharm]);
+         
+         //std::cout << rN2._weights << " " << rN2._sum.real() << " " << rN2._sum.imag() << std::endl; 
+         qN2_->corr[iharm] = TComplex(rN2._sum.real(), rN2._sum.imag());
+         qN4_->corr[iharm] = TComplex(rN4._sum.real(), rN4._sum.imag());
+         qN6_->corr[iharm] = TComplex(rN6._sum.real(), rN6._sum.imag());
+         qN8_->corr[iharm] = TComplex(rN8._sum.real(), rN8._sum.imag());
+      }
+      qN2_->weight = rN2._weights; 
+      qN4_->weight = rN4._weights; 
+      qN6_->weight = rN6._weights; 
+      qN8_->weight = rN8._weights;
+   }
+   //std::cout << qN2_->corr[0].Re() << " " << qN2_->corr[0].Im() << " " << qN2_->weight << std::endl; 
 
    flowTree_->Fill();
 }
@@ -432,5 +515,38 @@ QVectorTreeProducer::isGoodTrack(const reco::Track & trk)
    return true;
 }
 
+void
+QVectorTreeProducer::initDiagQ()
+{
+   cqNvec_.resize(nHarmTrk_);
+   for(unsigned int iharm = 0; iharm < nHarmTrk_; ++iharm)
+   {
+       hcNvec_.push_back(correlations::HarmonicVector(8));
+       for(int ipart = 0; ipart < 8; ++ipart)
+       {
+           if(ipart%2 == 0) hcNvec_[iharm][ipart] =    vHarmTrk_[iharm];
+           else             hcNvec_[iharm][ipart] = -1*vHarmTrk_[iharm];
+       }
+
+       qNvec_[iharm].resize(hcNvec_[iharm]);
+       switch ( cMode_ ) {
+          case 1:
+             cqNvec_[iharm] = new correlations::recurrence::FromQVector(qNvec_[iharm]);
+             break;
+          default:
+      	     cqNvec_[iharm] = new correlations::recursive::FromQVector(qNvec_[iharm]);
+      	     break;
+       }
+   }
+}
+
+void
+QVectorTreeProducer::doneDiagQ()
+{
+   for(unsigned int iharm = 0; iharm < nHarmTrk_; ++iharm)
+   {
+      qNvec_[iharm].reset();
+   }
+}
 //define this as a plug-in
 DEFINE_FWK_MODULE(QVectorTreeProducer);

@@ -48,6 +48,14 @@
 #include <TFile.h>
 #include <TH2D.h>
 
+#include <FlowCorr/QVectorTreeProducer/interface/FlowCorrelator.h>
+#include <FlowCorr/QVectorTreeProducer/interface/correlations/Types.hh>
+#include <FlowCorr/QVectorTreeProducer/interface/correlations/Result.hh>
+#include <FlowCorr/QVectorTreeProducer/interface/correlations/QVector.hh>
+#include <FlowCorr/QVectorTreeProducer/interface/correlations/FromQVector.hh>
+#include <FlowCorr/QVectorTreeProducer/interface/correlations/recursive/FromQVector.hh>
+#include <FlowCorr/QVectorTreeProducer/interface/correlations/recurrence/FromQVector.hh>
+
 //
 // typedef
 //
@@ -143,6 +151,18 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
       edm::EDGetTokenT<reco::EvtPlaneCollection> evtPlaneFlatTag_;
       int epLvl_;
 
+      // ## harmonics ##
+      std::vector<int> vHarmTrk_;
+      std::vector<int> vHarmHF_;
+
+      // ## cumulant ##
+      int  cMode_;
+      bool cWeight_;
+
+      // ## Acc x Eff correction ##
+      edm::InputTag    fName_;
+      std::vector<int> effCentBin_;
+
 
       // ~~~> Class parameters <~~~ 
       // ## tracks ##
@@ -166,21 +186,29 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
       sFlowEPangle HFpPsi_;
       sFlowEPangle HFPsi_;
 
+      // ## harmonics ##
+      unsigned int nHarmTrk_;
+      unsigned int nHarmHF_;
+
       // ## cumulant ##
-      int  cMode_;
-      bool cWeight_;
+      //   --- diagonal terms
+      std::vector<correlations::QVector>        qNvec_;
+      std::vector<correlations::HarmonicVector> hcNvec_;
+      std::vector<correlations::FromQVector*>   cqNvec_;
+   
+      FlowCorrelator *qN2_;
+      FlowCorrelator *qN4_;
+      FlowCorrelator *qN6_;
+      FlowCorrelator *qN8_;
+      //   --- non-diagonal terms
+      //   --- diagonal terms w/ gap
 
       // ## gap ##
       double Gap_;
 
-      // ## harmonics ##
-      unsigned int nHarm_;
-      std::vector<int> vHarm_;
-
       // ## Acc x Eff correction ##
       TFile * fEff_;
       std::vector<TH2D*> hEff_;
-      edm::InputTag      fName_;
 
       // ## output tree and histograms ##
       TTree* flowTree_;
@@ -191,5 +219,7 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
                            edm::Handle< reco::TrackCollection > tracks);
       void getNoff(edm::Handle< reco::TrackCollection > tracks);
       bool isGoodTrack(const reco::Track & trk);
+      void initDiagQ();
+      void doneDiagQ();
 };
 
