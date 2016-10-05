@@ -10,3 +10,9 @@
 # Temporary files #
 ###################
 *.swp
+
+
+####################
+# Cfg output files #
+####################
+flowCorr_data.root
