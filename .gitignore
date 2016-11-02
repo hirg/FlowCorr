@@ -10,7 +10,7 @@
 # Temporary files #
 ###################
 *.swp
-
+*.swo
 
 ####################
 # Cfg output files #

@@ -49,6 +49,8 @@
 #include <TH2D.h>
 
 #include <FlowCorr/QVectorTreeProducer/interface/FlowCorrelator.h>
+#include <FlowCorr/QVectorTreeProducer/interface/FlowTrackSelection.h>
+#include <FlowCorr/QVectorTreeProducer/interface/FlowUtils.h>
 #include <FlowCorr/QVectorTreeProducer/interface/correlations/Types.hh>
 #include <FlowCorr/QVectorTreeProducer/interface/correlations/Result.hh>
 #include <FlowCorr/QVectorTreeProducer/interface/correlations/QVector.hh>
@@ -59,19 +61,6 @@
 //
 // typedef
 //
-typedef struct {
-  double xVtx;
-  double yVtx;
-  double zVtx;
-  int nVtx;
-} sVertex;
-
-typedef struct {
-  double psi1;  
-  double psi2;
-  double psi3;
-  double psi4;
-} sFlowEPangle;
 
 //
 // class declaration
@@ -166,14 +155,16 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
 
       // ~~~> Class parameters <~~~ 
       // ## tracks ##
+      sEvent Evt_;
       int nOff_;
       int nRef_;
+      double nOffcorr_;
+      double nRefcorr_;
+      FlowTrackSelection trkSelectorOff_;
+      FlowTrackSelection trkSelectorRef_;
 
       // ## vertex ##
       sVertex Vtx_;
-      double xVtxError_;
-      double yVtxError_;
-      double zVtxError_;
 
       // ## calotower ##
       double Etmin_;
@@ -201,6 +192,11 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
       FlowCorrelator *qN6_;
       FlowCorrelator *qN8_;
       //   --- non-diagonal terms
+      std::vector< std::vector<correlations::QVector> >        qNMvec_;
+      std::vector< std::vector<correlations::HarmonicVector> > hcNMvec_;
+      std::vector< std::vector<correlations::FromQVector*> >   cqNMvec_;
+
+      std::vector<FlowCorrelator*> qNM4_;
       //   --- diagonal terms w/ gap
 
       // ## gap ##
@@ -211,6 +207,39 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
       std::vector<TH2D*> hEff_;
 
       // ## output tree and histograms ##
+      TH1F* htrk_eta_ref_;
+      TH1F* htrk_phi_ref_;
+      TH1F* htrk_pt_ref_ ;
+
+      TH1F* htrk_eta_corr_ref_; 
+      TH1F* htrk_phi_corr_ref_;
+      TH1F* htrk_pt_corr_ref_;
+
+      TH1F* htrk_dzdzerr_ref_; 
+      TH1F* htrk_d0d0err_ref_;
+      TH1F* htrk_ptpterr_ref_;
+      TH1F* htrk_chi2nlayers_ref_;
+      TH1I* htrk_nhits_ref_;
+      TH1I* htrk_algo_ref_; 
+      //--
+      TH1F* htrk_eta_off_;
+      TH1F* htrk_phi_off_;
+      TH1F* htrk_pt_off_ ;
+
+      TH1F* htrk_eta_corr_off_; 
+      TH1F* htrk_phi_corr_off_;
+      TH1F* htrk_pt_corr_off_;
+
+      TH1F* htrk_dzdzerr_off_; 
+      TH1F* htrk_d0d0err_off_;
+      TH1F* htrk_ptpterr_off_;
+      TH1F* htrk_chi2nlayers_off_;
+      TH1I* htrk_nhits_off_;
+      TH1I* htrk_algo_off_; 
+
+      TFileDirectory flowHistListRef_;
+      TFileDirectory flowHistListOff_;
+
       TTree* flowTree_;
 
       // ---------- public methods ------------
@@ -218,8 +247,10 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
                            edm::Handle< reco::VertexCollection > vertices,
                            edm::Handle< reco::TrackCollection > tracks);
       void getNoff(edm::Handle< reco::TrackCollection > tracks);
-      bool isGoodTrack(const reco::Track & trk);
       void initDiagQ();
+      void initNonDiagQ();
       void doneDiagQ();
+      void doneNonDiagQ();
+      double getAccEffWeight(double eta, double pt);
 };
 

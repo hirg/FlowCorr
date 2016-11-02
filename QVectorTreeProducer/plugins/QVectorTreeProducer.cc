@@ -90,9 +90,15 @@ QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
    //now do what ever initialization is needed
    //Qn vectors trk
    nHarmTrk_ = vHarmTrk_.size();
+   qNMvec_.resize(nHarmTrk_-1);
    for(unsigned int iharm = 0; iharm < nHarmTrk_; ++iharm)
    {
       qNvec_.push_back(correlations::QVector(0, 0, cWeight_));   
+
+      for(unsigned int jharm = iharm+1; jharm < nHarmTrk_; ++jharm)
+      {
+         qNMvec_[iharm].push_back(correlations::QVector(0, 0, cWeight_)); 
+      }
    }
 
    initDiagQ();
@@ -100,6 +106,13 @@ QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
    qN4_ = new FlowCorrelator(nHarmTrk_);
    qN6_ = new FlowCorrelator(nHarmTrk_);
    qN8_ = new FlowCorrelator(nHarmTrk_);
+
+   initNonDiagQ();
+   qNM4_.resize(nHarmTrk_-1);
+   for(unsigned int iharm = 0; iharm < nHarmTrk_-1; ++iharm)
+   {
+      qNM4_[iharm] = new FlowCorrelator(nHarmTrk_-iharm-1);
+   } 
 
    //file acc & eff
    TString filename(fName_.label().c_str());
@@ -117,31 +130,95 @@ QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
       edm::LogInfo("Input file for accXeff corrections") <<"Using file " << fEff_->GetName();
    }
 
-
-   //TTree
+   //Track selector
+   sTrkCut cutsOff;
+   cutsOff.dzvtxdzerror = dzdzErrorOff_; 
+   cutsOff.d0vtxd0error = d0d0ErrorOff_; 
+   cutsOff.etamin       = MinEtaOff_; 
+   cutsOff.etamax       = MaxEtaOff_; 
+   cutsOff.ptmin        = MinPtOff_; 
+   cutsOff.ptmax        = MaxPtOff_; 
+   cutsOff.pterrorpt    = PtErrorPtOff_; 
+   cutsOff.chi2nnlayers = Chi2nOff_; 
+   cutsOff.nhits        = nHitsOff_; 
+   cutsOff.algo         = trkAlgoOff_; 
+   cutsOff.charge       = ChargeOff_;
+   trkSelectorOff_ = FlowTrackSelection(cutsOff); 
+  
+   sTrkCut cutsRef;
+   cutsRef.dzvtxdzerror = dzdzErrorRef_; 
+   cutsRef.d0vtxd0error = d0d0ErrorRef_; 
+   cutsRef.etamin       = MinEtaRef_; 
+   cutsRef.etamax       = MaxEtaRef_; 
+   cutsRef.ptmin        = MinPtRef_; 
+   cutsRef.ptmax        = MaxPtRef_; 
+   cutsRef.pterrorpt    = PtErrorPtRef_; 
+   cutsRef.chi2nnlayers = Chi2nRef_; 
+   cutsRef.nhits        = nHitsRef_; 
+   cutsRef.algo         = trkAlgoRef_; 
+   cutsRef.charge       = ChargeRef_;
+   trkSelectorRef_ = FlowTrackSelection(cutsRef); 
+  
    edm::Service<TFileService> fs;
-
+   //Histo && TFileDirectory
+   flowHistListRef_ = fs->mkdir("nRef_TrkHists");
+   htrk_eta_ref_      = flowHistListRef_.make<TH1F>("htrk_eta_ref",      "", 60,   -3., 3.);
+   htrk_phi_ref_      = flowHistListRef_.make<TH1F>("htrk_phi_ref",      "", 80,   -4., 4.);
+   htrk_pt_ref_       = flowHistListRef_.make<TH1F>("htrk_pt_ref" ,      "", 1000,  0,  100.);
+   htrk_eta_corr_ref_ = flowHistListRef_.make<TH1F>("htrk_eta_corr_ref", "", 60,   -3., 3.);
+   htrk_phi_corr_ref_ = flowHistListRef_.make<TH1F>("htrk_phi_corr_ref", "", 80,   -4., 4.);
+   htrk_pt_corr_ref_  = flowHistListRef_.make<TH1F>("htrk_pt_corr_ref" , "", 1000,  0,  100.);
+   htrk_dzdzerr_ref_  = flowHistListRef_.make<TH1F>("htrk_dzdzerr_ref" , "", 200, -10., 10.);
+   htrk_d0d0err_ref_  = flowHistListRef_.make<TH1F>("htrk_d0d0err_ref" , "", 200, -10., 10.);
+   htrk_ptpterr_ref_  = flowHistListRef_.make<TH1F>("htrk_ptpterr_ref" , "",1200, -0.2, 1.);
+   htrk_chi2nlayers_ref_ = flowHistListRef_.make<TH1F>("htrk_chi2nlayers_ref" , "", 200, 0., 1.);
+   htrk_nhits_ref_    = flowHistListRef_.make<TH1I>("htrk_nhits_ref"   , "", 100,   0,  100);
+   htrk_algo_ref_     = flowHistListRef_.make<TH1I>("htrk_algo_ref"    , "", 20,    0,  20);
+   //--
+   flowHistListOff_ = fs->mkdir("nOff_TrkHists");
+   htrk_eta_off_      = flowHistListOff_.make<TH1F>("htrk_eta_off",      "", 60,   -3., 3.);
+   htrk_phi_off_      = flowHistListOff_.make<TH1F>("htrk_phi_off",      "", 80,   -4., 4.);
+   htrk_pt_off_       = flowHistListOff_.make<TH1F>("htrk_pt_off" ,      "", 1000,  0,  100.);
+   htrk_eta_corr_off_ = flowHistListOff_.make<TH1F>("htrk_eta_corr_off", "", 60,   -3., 3.);
+   htrk_phi_corr_off_ = flowHistListOff_.make<TH1F>("htrk_phi_corr_off", "", 80,   -4., 4.);
+   htrk_pt_corr_off_  = flowHistListOff_.make<TH1F>("htrk_pt_corr_off" , "", 1000,  0,  100.);
+   htrk_dzdzerr_off_  = flowHistListOff_.make<TH1F>("htrk_dzdzerr_off" , "", 200, -10., 10.);
+   htrk_d0d0err_off_  = flowHistListOff_.make<TH1F>("htrk_d0d0err_off" , "", 200, -10., 10.);
+   htrk_ptpterr_off_  = flowHistListOff_.make<TH1F>("htrk_ptpterr_off" , "",1200, -0.2, 1.);
+   htrk_chi2nlayers_off_ = flowHistListOff_.make<TH1F>("htrk_chi2nlayers_off" , "", 200, 0., 1.);
+   htrk_nhits_off_    = flowHistListOff_.make<TH1I>("htrk_nhits_off"   , "", 100,   0,  100);
+   htrk_algo_off_     = flowHistListOff_.make<TH1I>("htrk_algo_off"    , "", 20,    0,  20);
+   //TTree
    flowTree_ = fs->make<TTree>("flowTree", "flowTree");
-   flowTree_->Branch("cent",       &Cent_,   "cent/I");
-   flowTree_->Branch("noff",       &nOff_,   "noff/I");
-   flowTree_->Branch("nref",       &nRef_,   "nref/I");
-   flowTree_->Branch("Vertex",     &Vtx_,    "xVtx/D:yVtx:zVtx:nVtx/I");
-   flowTree_->Branch("HFmEPangle", &HFmPsi_, "psi1/D:psi2:psi3:psi4");
-   flowTree_->Branch("HFpEPangle", &HFpPsi_, "psi1/D:psi2:psi3:psi4");
-   flowTree_->Branch("HFEPangle",  &HFPsi_,  "psi1/D:psi2:psi3:psi4");
-   flowTree_->Branch("<2>_n", "FlowCorrelator", &qN2_, 32000, 3);
-   flowTree_->Branch("<4>_n", "FlowCorrelator", &qN4_, 32000, 3);
-   flowTree_->Branch("<6>_n", "FlowCorrelator", &qN6_, 32000, 3);
-   flowTree_->Branch("<8>_n", "FlowCorrelator", &qN8_, 32000, 3);
+   flowTree_->Branch("Event",    &Evt_,    "noff_corr/D:nref_corr:run/I:event:lumi:cent:noff:nref");
+   flowTree_->Branch("Vertex",   &Vtx_,    "xVtx/D:yVtx:zVtx:xVtxError:yVtxError:zVtxError:nVtx/I");
+   flowTree_->Branch("PsiMinus", &HFmPsi_, "psi1/D:psi2:psi3:psi4");
+   flowTree_->Branch("PsiPlus",  &HFpPsi_, "psi1/D:psi2:psi3:psi4");
+   flowTree_->Branch("Psi",      &HFPsi_,  "psi1/D:psi2:psi3:psi4");
+   flowTree_->Branch("<2>_nn", "FlowCorrelator", &qN2_, 32000, 3);
+   flowTree_->Branch("<4>_nn", "FlowCorrelator", &qN4_, 32000, 3);
+   flowTree_->Branch("<6>_nn", "FlowCorrelator", &qN6_, 32000, 3);
+   flowTree_->Branch("<8>_nn", "FlowCorrelator", &qN8_, 32000, 3);
+   for(unsigned int iharm = 0; iharm < nHarmTrk_-1; ++iharm)
+   {
+      flowTree_->Branch(Form("<4>_%dm",vHarmTrk_[iharm]), "FlowCorrelator", &qNM4_[iharm], 32000, 3);
+   }
 }
 
 QVectorTreeProducer::~QVectorTreeProducer()
 {
- 
    // do anything here that needs to be done at desctruction time
    // (e.g. close files, deallocate resources etc.)
    if(fEff_) fEff_->Close();
    hEff_.clear();
+
+   qNvec_.clear();
+
+   for(unsigned int iharm = 0; iharm < nHarmTrk_-1; ++iharm)
+   {
+      qNMvec_[iharm].clear();
+   } 
+   qNMvec_.clear();
 }
 
 
@@ -153,6 +230,17 @@ QVectorTreeProducer::~QVectorTreeProducer()
 void
 QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
+   //----- General informations -----
+   Evt_.run   = iEvent.id().run();
+   Evt_.event = iEvent.id().event();
+   Evt_.lumi  = iEvent.luminosityBlock();
+   Evt_.cent  = -1;
+   Evt_.noff  = -1;
+   Evt_.nref  = -1;
+   Evt_.noffcorr = -1;
+   Evt_.noffcorr = -1;
+
+ 
    //----- Vertex selection -----
    edm::Handle< reco::VertexCollection > vertices;
    iEvent.getByToken(vtxToken_, vertices);
@@ -193,6 +281,7 @@ QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
    { 
        edm::LogWarning ("Invalid value") <<"Invalid centrality value";
    }
+   Evt_.cent = Cent_;
    
    //----- Event Plane selection ----
    //Index     Name   Detector Order hmin1 hmax1 hmin2 hmax2 minpt maxpt
@@ -247,77 +336,122 @@ QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
    //----- Event selection -----
    if(!isEventSelected(iEvent, vertices, tracks)) return;
   
-   nRef_ = 0;
+   nRef_     = 0;
+   nRefcorr_ = 0.;
    for(reco::TrackCollection::const_iterator itTrk = tracks->begin(); itTrk != tracks->end(); ++itTrk)
    {
-      if(!isGoodTrack(*itTrk)) continue;
-      nRef_++;
-
-      double pt  = itTrk->pt();
-      double eta = itTrk->eta();
-      double phi = itTrk->phi();
+      trkSelectorRef_.resetVar(); 
+      trkSelectorRef_.fillVar(*itTrk, Vtx_, trackQualityTag_);
+      if(!trkSelectorRef_.isTrkPassCuts(isPixelTrackingRef_)) continue; 
 
       //Weight calculation from histograms
       double weight = 1.;
       if(cWeight_)
       {
-         if(hEff_.size() != effCentBin_.size() - 1 || effCentBin_.empty())
-         {
-            if(hEff_[0]->GetBinContent(hEff_[0]->FindBin(eta,pt)) != 0.) 
-               weight = 1./hEff_[0]->GetBinContent(hEff_[0]->FindBin(eta,pt));
-            else weight = 0.;
-         }
-         else
-         {
-            weight = 0.;
-            for(unsigned int icent = 0; icent < effCentBin_.size() - 1; ++icent)
-            {
-               if(Cent_ > 2*effCentBin_[icent] && Cent_ <= 2*effCentBin_[icent+1])
-               { 
-                  if(hEff_[icent]->GetBinContent(hEff_[icent]->FindBin(eta,pt)) != 0.) 
-                     weight = 1./hEff_[icent]->GetBinContent(hEff_[icent]->FindBin(eta,pt));
-                  else weight = 0.;
-                  break;
-               }
-            }
-         }
+         weight = getAccEffWeight(trkSelectorRef_.getTrk().eta, trkSelectorRef_.getTrk().pt);
       }
+
+      //Mult calculation
+      nRef_++;
+      nRefcorr_ += weight;
+
+      //Fill histos
+      htrk_eta_ref_->Fill(trkSelectorRef_.getTrk().eta);
+      htrk_phi_ref_->Fill(trkSelectorRef_.getTrk().phi);
+      htrk_pt_ref_ ->Fill(trkSelectorRef_.getTrk().pt);
+
+      htrk_eta_corr_ref_->Fill(trkSelectorRef_.getTrk().eta, weight);
+      htrk_phi_corr_ref_->Fill(trkSelectorRef_.getTrk().phi, weight);
+      htrk_pt_corr_ref_ ->Fill(trkSelectorRef_.getTrk().pt,  weight);
+
+      if(trkSelectorRef_.getTrk().dzerror != 0.) htrk_dzdzerr_ref_    ->Fill(trkSelectorRef_.getTrk().dzvtx/trkSelectorRef_.getTrk().dzerror);
+      if(trkSelectorRef_.getTrk().d0error != 0.) htrk_d0d0err_ref_    ->Fill(trkSelectorRef_.getTrk().d0vtx/trkSelectorRef_.getTrk().d0error);
+      if(trkSelectorRef_.getTrk().pt      != 0.) htrk_ptpterr_ref_    ->Fill(trkSelectorRef_.getTrk().pterror/trkSelectorRef_.getTrk().pt);
+      if(trkSelectorRef_.getTrk().nlayers != 0.) htrk_chi2nlayers_ref_->Fill(trkSelectorRef_.getTrk().chi2n/trkSelectorRef_.getTrk().nlayers);
+      htrk_nhits_ref_->Fill(trkSelectorRef_.getTrk().nhits);
+      htrk_algo_ref_ ->Fill(trkSelectorRef_.getTrk().algo);
+      //--
+      htrk_eta_off_->Fill(trkSelectorOff_.getTrk().eta);
+      htrk_phi_off_->Fill(trkSelectorOff_.getTrk().phi);
+      htrk_pt_off_ ->Fill(trkSelectorOff_.getTrk().pt);
+
+      htrk_eta_corr_off_->Fill(trkSelectorOff_.getTrk().eta, weight);
+      htrk_phi_corr_off_->Fill(trkSelectorOff_.getTrk().phi, weight);
+      htrk_pt_corr_off_ ->Fill(trkSelectorOff_.getTrk().pt,  weight);
+
+      if(trkSelectorOff_.getTrk().dzerror != 0.) htrk_dzdzerr_off_    ->Fill(trkSelectorOff_.getTrk().dzvtx/trkSelectorOff_.getTrk().dzerror);
+      if(trkSelectorOff_.getTrk().d0error != 0.) htrk_d0d0err_off_    ->Fill(trkSelectorOff_.getTrk().d0vtx/trkSelectorOff_.getTrk().d0error);
+      if(trkSelectorOff_.getTrk().pt      != 0.) htrk_ptpterr_off_    ->Fill(trkSelectorOff_.getTrk().pterror/trkSelectorOff_.getTrk().pt);
+      if(trkSelectorOff_.getTrk().nlayers != 0.) htrk_chi2nlayers_off_->Fill(trkSelectorOff_.getTrk().chi2n/trkSelectorOff_.getTrk().nlayers);
+      htrk_nhits_off_->Fill(trkSelectorOff_.getTrk().nhits);
+      htrk_algo_off_ ->Fill(trkSelectorOff_.getTrk().algo);
 
       //Filling Qvectors
       for(unsigned int iharm = 0; iharm < nHarmTrk_; ++iharm)
       {
-         qNvec_[iharm].fill(phi, weight);
+      //-- Diagonal
+         qNvec_[iharm].fill(trkSelectorRef_.getTrk().phi, weight);
+      //-- Non diagonal
+         for(unsigned int jharm = iharm+1; jharm < nHarmTrk_; ++jharm)
+         {
+             qNMvec_[iharm][jharm-iharm-1].fill(trkSelectorRef_.getTrk().phi, weight);
+         }
       }
    }
 
+   if(nOff_ != 0) Evt_.noff = nOff_; 
+   if(nRef_ != 0) Evt_.nref = nRef_; 
+
+   if(nOffcorr_ != 0) Evt_.noffcorr = nOffcorr_; 
+   if(nRefcorr_ != 0) Evt_.nrefcorr = nRefcorr_; 
+
    //Calculate correlators
+   //-- Diagonal
    correlations::Result rN2; 
    correlations::Result rN4;
    correlations::Result rN6;
    correlations::Result rN8;
+   //-- Non diagonal
+   correlations::Result rNM4;
    if(nHarmTrk_ != 0)
    {
       for(unsigned int iharm = 0; iharm < nHarmTrk_; ++iharm)
       {
+         //-- Diagonal
          rN2 = cqNvec_[iharm]->calculate(2, hcNvec_[iharm]);
          rN4 = cqNvec_[iharm]->calculate(4, hcNvec_[iharm]);
          rN6 = cqNvec_[iharm]->calculate(6, hcNvec_[iharm]);
          rN8 = cqNvec_[iharm]->calculate(8, hcNvec_[iharm]);
          
-         //std::cout << rN2._weights << " " << rN2._sum.real() << " " << rN2._sum.imag() << std::endl; 
          qN2_->corr[iharm] = TComplex(rN2._sum.real(), rN2._sum.imag());
          qN4_->corr[iharm] = TComplex(rN4._sum.real(), rN4._sum.imag());
          qN6_->corr[iharm] = TComplex(rN6._sum.real(), rN6._sum.imag());
          qN8_->corr[iharm] = TComplex(rN8._sum.real(), rN8._sum.imag());
+
+
+         //-- Non diagonal
+         for(unsigned int jharm = iharm+1; jharm < nHarmTrk_; ++jharm)
+         {
+            rNM4 = cqNMvec_[iharm][jharm-iharm-1]->calculate(4, hcNMvec_[iharm][jharm-iharm-1]);
+
+            qNM4_[iharm]->corr[jharm-iharm-1] = TComplex(rNM4._sum.real(), rNM4._sum.imag());
+         }
+
+         if(iharm < nHarmTrk_ -1)
+         {
+            qNM4_[iharm]->weight = rNM4._weights;
+         }
       }
       qN2_->weight = rN2._weights; 
       qN4_->weight = rN4._weights; 
       qN6_->weight = rN6._weights; 
       qN8_->weight = rN8._weights;
+
    }
-   //std::cout << qN2_->corr[0].Re() << " " << qN2_->corr[0].Im() << " " << qN2_->weight << std::endl; 
 
    flowTree_->Fill();
+   doneDiagQ();
+   doneNonDiagQ();
 }
 
 
@@ -364,9 +498,9 @@ QVectorTreeProducer::isEventSelected(const edm::Event& iEvent,
       Vtx_.xVtx = bestVtx.x();
       Vtx_.yVtx = bestVtx.y();
       Vtx_.zVtx = bestVtx.z();
-      xVtxError_ = bestVtx.xError();
-      yVtxError_ = bestVtx.yError();
-      zVtxError_ = bestVtx.zError();
+      Vtx_.xVtxError = bestVtx.xError();
+      Vtx_.yVtxError = bestVtx.yError();
+      Vtx_.zVtxError = bestVtx.zError();
    }
    double rho = sqrt(Vtx_.xVtx*Vtx_.xVtx + Vtx_.yVtx*Vtx_.yVtx);
  
@@ -399,120 +533,26 @@ void
 QVectorTreeProducer::getNoff(edm::Handle< reco::TrackCollection > tracks)
 {
    nOff_ = 0;
+   nOffcorr_ = 0.;
  
    for(reco::TrackCollection::const_iterator itTrk = tracks->begin(); itTrk != tracks->end(); ++itTrk)
    {
-      //--- Multiplicity info (nOff)
-      // Select tracks based on proximity to best vertex
-      math::XYZPoint bestVtxPoint(Vtx_.xVtx,Vtx_.yVtx,Vtx_.zVtx);
- 
-      double  dzvtx   = itTrk->dz(bestVtxPoint);
-      double  d0vtx   = itTrk->dxy(bestVtxPoint);
-      double  dzerror = sqrt(itTrk->dzError()*itTrk->dzError()+zVtxError_*zVtxError_);
-      double  d0error = sqrt(itTrk->d0Error()*itTrk->d0Error()+xVtxError_*yVtxError_);
-      double  eta     = itTrk->eta();
-      double  pt      = itTrk->pt();
-      double  pterror = itTrk->ptError();
-      double chi2n   = itTrk->normalizedChi2();
-      double nlayers = itTrk->hitPattern().trackerLayersWithMeasurement();
-      if(nlayers > 0.) chi2n = chi2n/nlayers;
-      else             chi2n = 999.;
-      int nhits      = itTrk->numberOfValidHits();
-      int algo       = itTrk->originalAlgo();
-      int charge     = itTrk->charge(); 
- 
-      //--- Multiplicity selection
-      //if(!itTrk->quality(reco::TrackBase::qualityByName(trackQualityTag_))) continue;
-      if(!itTrk->quality(reco::TrackBase::highPurity)) continue;
-      if(eta < MinEtaOff_ || eta > MaxEtaOff_)         continue;
-      if(pt < MinPtOff_ || pt > MaxPtOff_)             continue;
-      if(find(ChargeOff_.begin(), ChargeOff_.end(), charge) == ChargeOff_.end() &&
-         !ChargeOff_.empty())                          continue; 
- 
-      if(isPixelTrackingOff_)
-      {
-         if(pt < 2.4 && (nhits < 3  || nhits > 6))     continue;
-         else
-         {
-            if(fabs(dzvtx/dzerror) > dzdzErrorOff_)    continue;
-            if(fabs(d0vtx/d0error) > d0d0ErrorOff_)    continue;
-            if(fabs(pterror)/pt > PtErrorPtOff_)       continue;
-            if(chi2n > Chi2nOff_)                      continue;
-            if(nhits < nHitsOff_)                      continue;
-            if(find(trkAlgoOff_.begin(), trkAlgoOff_.end(), algo) == trkAlgoOff_.end() &&
-               !trkAlgoOff_.empty())                   continue;
-         }
-      }
-      else
-      {
-         if(fabs(dzvtx/dzerror) > dzdzErrorOff_)       continue;
-         if(fabs(d0vtx/d0error) > d0d0ErrorOff_)       continue;
-         if(fabs(pterror)/pt > PtErrorPtOff_)          continue;
-         if(chi2n > Chi2nOff_)                         continue;
-         if(nhits < nHitsOff_)                         continue;
-         if(find(trkAlgoOff_.begin(), trkAlgoOff_.end(), algo) == trkAlgoOff_.end() &&
-            !trkAlgoOff_.empty())                      continue;
-      }
- 
-      nOff_++;
-   }
-}
+      trkSelectorOff_.resetVar(); 
+      trkSelectorOff_.fillVar(*itTrk, Vtx_, "highPurity");
 
-bool 
-QVectorTreeProducer::isGoodTrack(const reco::Track & trk)
-{
-   //--- Multiplicity info (nRef)
-   // Select tracks based on proximity to best vertex
-   math::XYZPoint bestVtxPoint(Vtx_.xVtx,Vtx_.yVtx,Vtx_.zVtx);
+      if(!trkSelectorOff_.isTrkPassCuts(isPixelTrackingOff_)) continue; 
  
-   double  dzvtx   = trk.dz(bestVtxPoint);
-   double  d0vtx   = trk.dxy(bestVtxPoint);
-   double  dzerror = sqrt(trk.dzError()*trk.dzError()+zVtxError_*zVtxError_);
-   double  d0error = sqrt(trk.d0Error()*trk.d0Error()+xVtxError_*yVtxError_);
-   double  eta     = trk.eta();
-   double  pt      = trk.pt();
-   double  pterror = trk.ptError();
-   double chi2n   = trk.normalizedChi2();
-   double nlayers = trk.hitPattern().trackerLayersWithMeasurement();
-   if(nlayers > 0.) chi2n = chi2n/nlayers;
-   else             chi2n = 999.;
-   int nhits      = trk.numberOfValidHits();
-   int algo       = trk.originalAlgo();
-   int charge     = trk.charge(); 
- 
-   //--- Multiplicity selection
-   if(trk.quality(reco::TrackBase::qualityByName(trackQualityTag_))) return false;
-   if(eta < MinEtaRef_ || eta > MaxEtaRef_)                          return false;
-   if(pt < MinPtRef_ || pt > MaxPtRef_)                              return false;
-   if(find(ChargeRef_.begin(), ChargeRef_.end(), charge) == ChargeRef_.end() &&
-      !ChargeRef_.empty())                                           return false; 
- 
-   if(isPixelTrackingRef_)
-   {
-      if(pt < 2.4 && (nhits < 3  || nhits > 6))                      return false;
-      else
+      //Weight calculation from histograms
+      double weight = 1.;
+      if(cWeight_)
       {
-         if(fabs(dzvtx/dzerror) > dzdzErrorRef_)                     return false;
-         if(fabs(d0vtx/d0error) > d0d0ErrorRef_)                     return false;
-         if(fabs(pterror)/pt > PtErrorPtRef_)                        return false;
-         if(chi2n > Chi2nRef_)                                       return false;
-         if(nhits < nHitsRef_)                                       return false;
-         if(find(trkAlgoRef_.begin(), trkAlgoRef_.end(), algo) == trkAlgoRef_.end() &&
-            !trkAlgoRef_.empty())                                    return false;
+         weight = getAccEffWeight(trkSelectorOff_.getTrk().eta, trkSelectorOff_.getTrk().pt);
       }
+
+      //Ntrk offline calculation
+      nOff_++;
+      nOffcorr_ += weight; 
    }
-   else
-   {
-      if(fabs(dzvtx/dzerror) > dzdzErrorRef_)                        return false;
-      if(fabs(d0vtx/d0error) > d0d0ErrorRef_)                        return false;
-      if(fabs(pterror)/pt > PtErrorPtRef_)                           return false;
-      if(chi2n > Chi2nRef_)                                          return false;
-      if(nhits < nHitsRef_)                                          return false;
-      if(find(trkAlgoRef_.begin(), trkAlgoRef_.end(), algo) == trkAlgoRef_.end() &&
-         !trkAlgoRef_.empty())                                       return false;
-   }
- 
-   return true;
 }
 
 void
@@ -541,12 +581,86 @@ QVectorTreeProducer::initDiagQ()
 }
 
 void
+QVectorTreeProducer::initNonDiagQ()
+{
+   cqNMvec_.resize(nHarmTrk_-1);
+   hcNMvec_.resize(nHarmTrk_-1);
+   for(unsigned int iharm = 0; iharm < nHarmTrk_-1; ++iharm)
+   {
+       for(unsigned int jharm = iharm+1; jharm < nHarmTrk_; ++jharm)
+       {
+          hcNMvec_[iharm].push_back(correlations::HarmonicVector(4));
+          hcNMvec_[iharm][jharm-iharm-1][0] =    vHarmTrk_[iharm];
+          hcNMvec_[iharm][jharm-iharm-1][1] = -1*vHarmTrk_[iharm];
+          hcNMvec_[iharm][jharm-iharm-1][2] =    vHarmTrk_[jharm];
+          hcNMvec_[iharm][jharm-iharm-1][3] = -1*vHarmTrk_[jharm];
+
+          qNMvec_[iharm][jharm-iharm-1].resize(hcNMvec_[iharm][jharm-iharm-1]);
+          switch ( cMode_ ) {
+             case 1:
+                cqNMvec_[iharm].push_back(new correlations::recurrence::FromQVector(qNMvec_[iharm][jharm-iharm-1]));
+                break;
+             default:
+                cqNMvec_[iharm].push_back(new correlations::recursive::FromQVector(qNMvec_[iharm][jharm-iharm-1]));
+                break;
+          }
+       }
+   }
+
+}
+
+void
 QVectorTreeProducer::doneDiagQ()
 {
    for(unsigned int iharm = 0; iharm < nHarmTrk_; ++iharm)
    {
       qNvec_[iharm].reset();
    }
+ 
+//   qNvec_.clear();
 }
+
+void
+QVectorTreeProducer::doneNonDiagQ()
+{
+   for(unsigned int iharm = 0; iharm < nHarmTrk_-1; ++iharm)
+   {
+      for(unsigned int jharm = iharm+1; jharm < nHarmTrk_; ++jharm)
+      {
+         qNMvec_[iharm][jharm-iharm-1].reset();
+      }
+//      qNMvec_[iharm].clear();
+   }
+ 
+//   qNMvec_.clear();
+}
+
+double
+QVectorTreeProducer::getAccEffWeight(double eta, double pt)
+{
+   double weight = 1.;
+   if(hEff_.size() != effCentBin_.size() - 1 || effCentBin_.empty())
+   {
+      if(hEff_[0]->GetBinContent(hEff_[0]->FindBin(eta,pt)) != 0.) 
+         weight = 1./hEff_[0]->GetBinContent(hEff_[0]->FindBin(eta,pt));
+      else weight = 0.;
+   }
+   else
+   {
+      //weight = 0.;
+      for(unsigned int icent = 0; icent < effCentBin_.size() - 1; ++icent)
+      {
+         if(Cent_ > 2*effCentBin_[icent] && Cent_ <= 2*effCentBin_[icent+1])
+         { 
+            if(hEff_[icent]->GetBinContent(hEff_[icent]->FindBin(eta,pt)) != 0.) 
+               weight = 1./hEff_[icent]->GetBinContent(hEff_[icent]->FindBin(eta,pt));
+            else weight = 0.;
+            break;
+         }
+      }
+   }
+   return weight;
+}
+
 //define this as a plug-in
 DEFINE_FWK_MODULE(QVectorTreeProducer);

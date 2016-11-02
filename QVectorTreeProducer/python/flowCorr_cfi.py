@@ -3,7 +3,7 @@ import FWCore.ParameterSet.Config as cms
 flowCorr = cms.EDAnalyzer('QVectorTreeProducer',
      #tracks
      tracks       = cms.InputTag('hiGeneralTracks'),
-     trackQuality = cms.untracked.string('highpurity'),
+     trackQuality = cms.untracked.string('highPurity'),
      noffmin      = cms.untracked.int32(0),
      noffmax      = cms.untracked.int32(10000),
       #--- offline tracks
