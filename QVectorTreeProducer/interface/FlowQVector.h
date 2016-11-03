@@ -33,6 +33,8 @@ class FlowQVector {
       FlowQVector(std::vector<int> vHarm);
       ~FlowQVector();
 
+      void fill(double phi, double weight);
+
       std::vector< std::complex<double> > corr;
       
    private:
