@@ -18,6 +18,7 @@
 
 
 // system include files
+#include <cmath>
 
 // user include files
 #include "FWCore/ServiceRegistry/interface/Service.h"
@@ -69,6 +70,9 @@ QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
    nVtxMax_(iConfig.getUntrackedParameter<int>("nVtxMax", 9999)),
 // #CaloTower
    caloTowerToken_(consumes<CaloTowerCollection>(iConfig.getParameter<edm::InputTag>("caloTower"))),
+   MinEtHF_(iConfig.getUntrackedParameter<double>("minEta",0.)),
+   MinEtaHF_(iConfig.getUntrackedParameter<double>("minEtaHF",2.9)),
+   MaxEtaHF_(iConfig.getUntrackedParameter<double>("maxEtaHF",5.1)),
 // #Centrality
    centralityToken_(consumes<reco::Centrality>(iConfig.getParameter<edm::InputTag>("centralitySrc"))),
    centralityBinToken_(consumes<int>(iConfig.getUntrackedParameter<edm::InputTag>("centralityBinSrc"))),
@@ -85,7 +89,10 @@ QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
    cWeight_(iConfig.getUntrackedParameter<bool>("cWeight")),
 // file acc & eff & fake
    fName_(iConfig.getUntrackedParameter<edm::InputTag>("fName")),
-   effCentBin_(iConfig.getUntrackedParameter< std::vector<int> >("effCentBin"))
+   effCentBin_(iConfig.getUntrackedParameter< std::vector<int> >("effCentBin")),
+// Qvector eta binning
+   EtaBinWidthTrk_(iConfig.getUntrackedParameter<double>("etaBinWidthTrk", 0.5)),
+   EtaBinWidthHF_(iConfig.getUntrackedParameter<double>("etaBinWidthHF"  , 0.5))
 {
    //now do what ever initialization is needed
    //Qn vectors trk
@@ -128,6 +135,24 @@ QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
          hEff_.push_back((TH2D*) fEff_->Get(fEff_->GetListOfKeys()->At(ihist)->GetName()));
       }
       edm::LogInfo("Input file for accXeff corrections") <<"Using file " << fEff_->GetName();
+   }
+
+   //qvector eta binning
+   if(EtaBinWidthTrk_ <= 0) EtaBinWidthTrk_ = 0.1;
+   nEtaBinTrk_ = ceil((MaxEtaRef_ - MinEtaRef_) / EtaBinWidthTrk_);
+   for(unsigned int ieta = 0; ieta < nEtaBinTrk_; ++ieta)
+   {
+      vQn_trkP_.push_back(new FlowQVector(vHarmTrk_));
+      vQn_trkN_.push_back(new FlowQVector(vHarmTrk_));
+   }
+
+   if(EtaBinWidthHF_ <= 0) EtaBinWidthTrk_ = 0.1;
+   nEtaBinHF_ = ceil((MaxEtaHF_ - MinEtaHF_) / EtaBinWidthHF_);
+
+   for(unsigned int ieta = 0; ieta < nEtaBinHF_; ++ieta)
+   {
+      vQn_hfP_.push_back(new FlowQVector(vHarmHF_));
+      vQn_hfM_.push_back(new FlowQVector(vHarmHF_));
    }
 
    //Track selector
@@ -189,19 +214,35 @@ QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
    htrk_nhits_off_    = flowHistListOff_.make<TH1I>("htrk_nhits_off"   , "", 100,   0,  100);
    htrk_algo_off_     = flowHistListOff_.make<TH1I>("htrk_algo_off"    , "", 20,    0,  20);
    //TTree
-   flowTree_ = fs->make<TTree>("flowTree", "flowTree");
-   flowTree_->Branch("Event",    &Evt_,    "noff_corr/D:nref_corr:run/I:event:lumi:cent:noff:nref");
-   flowTree_->Branch("Vertex",   &Vtx_,    "xVtx/D:yVtx:zVtx:xVtxError:yVtxError:zVtxError:nVtx/I");
-   flowTree_->Branch("PsiMinus", &HFmPsi_, "psi1/D:psi2:psi3:psi4");
-   flowTree_->Branch("PsiPlus",  &HFpPsi_, "psi1/D:psi2:psi3:psi4");
-   flowTree_->Branch("Psi",      &HFPsi_,  "psi1/D:psi2:psi3:psi4");
-   flowTree_->Branch("<2>_nn", "FlowCorrelator", &qN2_, 32000, 3);
-   flowTree_->Branch("<4>_nn", "FlowCorrelator", &qN4_, 32000, 3);
-   flowTree_->Branch("<6>_nn", "FlowCorrelator", &qN6_, 32000, 3);
-   flowTree_->Branch("<8>_nn", "FlowCorrelator", &qN8_, 32000, 3);
+   globalTree_ = fs->make<TTree>("globalTree", "globalTree");
+   globalTree_->Branch("Event",    &Evt_,    "noff_corr/D:nref_corr:run/I:event:lumi:cent:noff:nref");
+   globalTree_->Branch("Vertex",   &Vtx_,    "xVtx/D:yVtx:zVtx:xVtxError:yVtxError:zVtxError:nVtx/I");
+   globalTree_->Branch("PsiMinus", &HFmPsi_, "psi1/D:psi2:psi3:psi4");
+   globalTree_->Branch("PsiPlus",  &HFpPsi_, "psi1/D:psi2:psi3:psi4");
+   globalTree_->Branch("Psi",      &HFPsi_,  "psi1/D:psi2:psi3:psi4");
+   //--
+   correlatorTree_ = fs->make<TTree>("correlatorTree", "correlatorTree");
+   correlatorTree_->Branch("<2>_nn", "FlowCorrelator", &qN2_, 32000, 3);
+   correlatorTree_->Branch("<4>_nn", "FlowCorrelator", &qN4_, 32000, 3);
+   correlatorTree_->Branch("<6>_nn", "FlowCorrelator", &qN6_, 32000, 3);
+   correlatorTree_->Branch("<8>_nn", "FlowCorrelator", &qN8_, 32000, 3);
    for(unsigned int iharm = 0; iharm < nHarmTrk_-1; ++iharm)
    {
-      flowTree_->Branch(Form("<4>_%dm",vHarmTrk_[iharm]), "FlowCorrelator", &qNM4_[iharm], 32000, 3);
+      correlatorTree_->Branch(Form("<4>_%dm",vHarmTrk_[iharm]), "FlowCorrelator", &qNM4_[iharm], 32000, 3);
+   }
+   //--
+   qvectorTree_ = fs->make<TTree>("qvectorTree","qvectorTree");
+   for(unsigned int ieta = 0; ieta < nEtaBinTrk_; ++ieta)
+   {
+      if(find(ChargeRef_.begin(), ChargeRef_.end(),  1) != ChargeRef_.end())
+         qvectorTree_->Branch(Form("Qtrk_p_%d",ieta), "FlowQVector", &vQn_trkP_[ieta], 32000, 3);
+      if(find(ChargeRef_.begin(), ChargeRef_.end(), -1) != ChargeRef_.end()) 
+         qvectorTree_->Branch(Form("Qtrk_n_%d",ieta), "FlowQVector", &vQn_trkN_[ieta], 32000, 3);
+   }
+   for(unsigned int ieta = 0; ieta < nEtaBinHF_; ++ieta)
+   {
+      qvectorTree_->Branch(Form("QHF_p_%d",ieta), "FlowQVector", &vQn_hfP_[ieta], 32000, 3);
+      qvectorTree_->Branch(Form("QHF_m_%d",ieta), "FlowQVector", &vQn_hfM_[ieta], 32000, 3);
    }
 }
 
@@ -213,12 +254,54 @@ QVectorTreeProducer::~QVectorTreeProducer()
    hEff_.clear();
 
    qNvec_.clear();
+   hcNvec_.clear();
+   for(unsigned icq = 0; icq < cqNvec_.size(); ++icq)
+   {
+      delete cqNvec_[icq];
+   }
+   cqNvec_.clear();
+
+   delete qN2_;
+   delete qN4_;
+   delete qN6_;
+   delete qN8_;
+
 
    for(unsigned int iharm = 0; iharm < nHarmTrk_-1; ++iharm)
    {
       qNMvec_[iharm].clear();
+      hcNMvec_[iharm].clear();
+      for(unsigned int icq = 0; icq < cqNMvec_[iharm].size(); ++icq)
+      {
+         delete cqNMvec_[iharm][icq];
+      }
+      cqNMvec_[iharm].clear();
    } 
    qNMvec_.clear();
+   hcNMvec_.clear();
+   cqNMvec_.clear();
+
+   for(unsigned int iqnm = 0; iqnm < qNM4_.size(); ++iqnm)
+   {
+      delete qNM4_[iqnm];
+   }
+   qNM4_.clear();
+
+
+   for(unsigned int ieta = 0; ieta < nEtaBinTrk_; ++ieta)
+   {
+      delete vQn_trkP_[ieta];
+      delete vQn_trkN_[ieta];
+   }
+   for(unsigned int ieta = 0; ieta < nEtaBinHF_; ++ieta)
+   {
+      delete vQn_hfP_[ieta];
+      delete vQn_hfM_[ieta];
+   }
+   vQn_trkP_.clear(); 
+   vQn_trkN_.clear();
+   vQn_hfP_.clear();
+   vQn_hfM_.clear();
 }
 
 
@@ -284,54 +367,9 @@ QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
    Evt_.cent = Cent_;
    
    //----- Event Plane selection ----
-   //Index     Name   Detector Order hmin1 hmax1 hmin2 hmax2 minpt maxpt
-   //    0      HFm1        HF     1 -5.00 -3.00  0.00  0.00  0.01 30.00
-   //    1      HFp1        HF     1  3.00  5.00  0.00  0.00  0.01 30.00
-   //    2       HF1        HF     1 -5.00 -3.00  3.00  5.00  0.01 30.00
-   //    6      HFm2        HF     2 -5.00 -3.00  0.00  0.00  0.01 30.00
-   //    7      HFp2        HF     2  3.00  5.00  0.00  0.00  0.01 30.00
-   //    8       HF2        HF     2 -5.00 -3.00  3.00  5.00  0.01 30.00
-   //   13      HFm3        HF     3 -5.00 -3.00  0.00  0.00  0.01 30.00
-   //   14      HFp3        HF     3  3.00  5.00  0.00  0.00  0.01 30.00
-   //   15       HF3        HF     3 -5.00 -3.00  3.00  5.00  0.01 30.00
-   //   19      HFm4        HF     4 -5.00 -3.00  0.00  0.00  0.01 30.00
-   //   20      HFp4        HF     4  3.00  5.00  0.00  0.00  0.01 30.00
-   //   21       HF4        HF     4 -5.00 -3.00  3.00  5.00  0.01 30.00
-   //   25    HFm1mc        HF     1 -5.00 -3.00  0.00  0.00  0.01 30.00
-   //   26    HFp1mc        HF     1  3.00  5.00  0.00  0.00  0.01 30.00
-   unsigned int HFm[4] = {0, 6, 13, 19};
-   unsigned int HFp[4] = {1, 7, 14, 20};
-   unsigned int HF[4]  = {2, 8, 15, 21};
-
-
    edm::Handle<reco::EvtPlaneCollection> evtPlanes;
    iEvent.getByToken(evtPlaneTag_, evtPlanes);
-   if(evtPlanes.isValid())
-   {
-      //psi1
-      if(HFm[0] < evtPlanes->size()) HFmPsi_.psi1 = (*evtPlanes)[HFm[0]].angle(epLvl_);
-      if(HFp[0] < evtPlanes->size()) HFpPsi_.psi1 = (*evtPlanes)[HFp[0]].angle(epLvl_);
-      if(HF[0]  < evtPlanes->size()) HFPsi_.psi1  = (*evtPlanes)[HF[0]].angle(epLvl_);
-
-      //psi2
-      if(HFm[1] < evtPlanes->size()) HFmPsi_.psi2 = (*evtPlanes)[HFm[1]].angle(epLvl_);
-      if(HFp[1] < evtPlanes->size()) HFpPsi_.psi2 = (*evtPlanes)[HFp[1]].angle(epLvl_);
-      if(HF[1]  < evtPlanes->size()) HFPsi_.psi2  = (*evtPlanes)[HF[1]].angle(epLvl_);
-
-      //psi3
-      if(HFm[2] < evtPlanes->size()) HFmPsi_.psi3 = (*evtPlanes)[HFm[2]].angle(epLvl_);
-      if(HFp[2] < evtPlanes->size()) HFpPsi_.psi3 = (*evtPlanes)[HFp[2]].angle(epLvl_);
-      if(HF[2]  < evtPlanes->size()) HFPsi_.psi3  = (*evtPlanes)[HF[2]].angle(epLvl_);
-
-      //psi4
-      if(HFm[3] < evtPlanes->size()) HFmPsi_.psi4 = (*evtPlanes)[HFm[3]].angle(epLvl_);
-      if(HFp[3] < evtPlanes->size()) HFpPsi_.psi4 = (*evtPlanes)[HFp[3]].angle(epLvl_);
-      if(HF[3]  < evtPlanes->size()) HFPsi_.psi4  = (*evtPlanes)[HF[3]].angle(epLvl_);
-   }
-   else
-   {
-       edm::LogWarning ("Invalid value") << "Invalid EP value";
-   }
+   fillEPangle(evtPlanes);
 
    //----- Event selection -----
    if(!isEventSelected(iEvent, vertices, tracks)) return;
@@ -356,48 +394,23 @@ QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
       nRefcorr_ += weight;
 
       //Fill histos
-      htrk_eta_ref_->Fill(trkSelectorRef_.getTrk().eta);
-      htrk_phi_ref_->Fill(trkSelectorRef_.getTrk().phi);
-      htrk_pt_ref_ ->Fill(trkSelectorRef_.getTrk().pt);
+      fillHisto(weight);
 
-      htrk_eta_corr_ref_->Fill(trkSelectorRef_.getTrk().eta, weight);
-      htrk_phi_corr_ref_->Fill(trkSelectorRef_.getTrk().phi, weight);
-      htrk_pt_corr_ref_ ->Fill(trkSelectorRef_.getTrk().pt,  weight);
+      //Filling Qvectors for correlators
+      fillQVectorCorr(weight);
 
-      if(trkSelectorRef_.getTrk().dzerror != 0.) htrk_dzdzerr_ref_    ->Fill(trkSelectorRef_.getTrk().dzvtx/trkSelectorRef_.getTrk().dzerror);
-      if(trkSelectorRef_.getTrk().d0error != 0.) htrk_d0d0err_ref_    ->Fill(trkSelectorRef_.getTrk().d0vtx/trkSelectorRef_.getTrk().d0error);
-      if(trkSelectorRef_.getTrk().pt      != 0.) htrk_ptpterr_ref_    ->Fill(trkSelectorRef_.getTrk().pterror/trkSelectorRef_.getTrk().pt);
-      if(trkSelectorRef_.getTrk().nlayers != 0.) htrk_chi2nlayers_ref_->Fill(trkSelectorRef_.getTrk().chi2n/trkSelectorRef_.getTrk().nlayers);
-      htrk_nhits_ref_->Fill(trkSelectorRef_.getTrk().nhits);
-      htrk_algo_ref_ ->Fill(trkSelectorRef_.getTrk().algo);
-      //--
-      htrk_eta_off_->Fill(trkSelectorOff_.getTrk().eta);
-      htrk_phi_off_->Fill(trkSelectorOff_.getTrk().phi);
-      htrk_pt_off_ ->Fill(trkSelectorOff_.getTrk().pt);
+      //Filling trk QVectors for the QVector tree
+      fillQVectorTrk(weight);
 
-      htrk_eta_corr_off_->Fill(trkSelectorOff_.getTrk().eta, weight);
-      htrk_phi_corr_off_->Fill(trkSelectorOff_.getTrk().phi, weight);
-      htrk_pt_corr_off_ ->Fill(trkSelectorOff_.getTrk().pt,  weight);
-
-      if(trkSelectorOff_.getTrk().dzerror != 0.) htrk_dzdzerr_off_    ->Fill(trkSelectorOff_.getTrk().dzvtx/trkSelectorOff_.getTrk().dzerror);
-      if(trkSelectorOff_.getTrk().d0error != 0.) htrk_d0d0err_off_    ->Fill(trkSelectorOff_.getTrk().d0vtx/trkSelectorOff_.getTrk().d0error);
-      if(trkSelectorOff_.getTrk().pt      != 0.) htrk_ptpterr_off_    ->Fill(trkSelectorOff_.getTrk().pterror/trkSelectorOff_.getTrk().pt);
-      if(trkSelectorOff_.getTrk().nlayers != 0.) htrk_chi2nlayers_off_->Fill(trkSelectorOff_.getTrk().chi2n/trkSelectorOff_.getTrk().nlayers);
-      htrk_nhits_off_->Fill(trkSelectorOff_.getTrk().nhits);
-      htrk_algo_off_ ->Fill(trkSelectorOff_.getTrk().algo);
-
-      //Filling Qvectors
-      for(unsigned int iharm = 0; iharm < nHarmTrk_; ++iharm)
-      {
-      //-- Diagonal
-         qNvec_[iharm].fill(trkSelectorRef_.getTrk().phi, weight);
-      //-- Non diagonal
-         for(unsigned int jharm = iharm+1; jharm < nHarmTrk_; ++jharm)
-         {
-             qNMvec_[iharm][jharm-iharm-1].fill(trkSelectorRef_.getTrk().phi, weight);
-         }
-      }
+      //Filling HF QVectors for the QVector tree
+      //fillQVectorHF(weight);
    }
+
+   //qNvec_[0].print();
+   //std::cout << "qvector from me" << std::endl;
+   //std::cout << vQn_trkP_[0]->corr[0]+vQn_trkN_[0]->corr[0] << std::endl; 
+   //std::cout << vQn_trkP_[0]->corr[1]+vQn_trkN_[0]->corr[1] << std::endl; 
+
 
    if(nOff_ != 0) Evt_.noff = nOff_; 
    if(nRef_ != 0) Evt_.nref = nRef_; 
@@ -406,52 +419,17 @@ QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
    if(nRefcorr_ != 0) Evt_.nrefcorr = nRefcorr_; 
 
    //Calculate correlators
-   //-- Diagonal
-   correlations::Result rN2; 
-   correlations::Result rN4;
-   correlations::Result rN6;
-   correlations::Result rN8;
-   //-- Non diagonal
-   correlations::Result rNM4;
-   if(nHarmTrk_ != 0)
-   {
-      for(unsigned int iharm = 0; iharm < nHarmTrk_; ++iharm)
-      {
-         //-- Diagonal
-         rN2 = cqNvec_[iharm]->calculate(2, hcNvec_[iharm]);
-         rN4 = cqNvec_[iharm]->calculate(4, hcNvec_[iharm]);
-         rN6 = cqNvec_[iharm]->calculate(6, hcNvec_[iharm]);
-         rN8 = cqNvec_[iharm]->calculate(8, hcNvec_[iharm]);
-         
-         qN2_->corr[iharm] = TComplex(rN2._sum.real(), rN2._sum.imag());
-         qN4_->corr[iharm] = TComplex(rN4._sum.real(), rN4._sum.imag());
-         qN6_->corr[iharm] = TComplex(rN6._sum.real(), rN6._sum.imag());
-         qN8_->corr[iharm] = TComplex(rN8._sum.real(), rN8._sum.imag());
+   fillCorrelators();
 
+   //Fill TTrees
+   globalTree_->Fill();
+   correlatorTree_->Fill();
+   qvectorTree_->Fill();
 
-         //-- Non diagonal
-         for(unsigned int jharm = iharm+1; jharm < nHarmTrk_; ++jharm)
-         {
-            rNM4 = cqNMvec_[iharm][jharm-iharm-1]->calculate(4, hcNMvec_[iharm][jharm-iharm-1]);
-
-            qNM4_[iharm]->corr[jharm-iharm-1] = TComplex(rNM4._sum.real(), rNM4._sum.imag());
-         }
-
-         if(iharm < nHarmTrk_ -1)
-         {
-            qNM4_[iharm]->weight = rNM4._weights;
-         }
-      }
-      qN2_->weight = rN2._weights; 
-      qN4_->weight = rN4._weights; 
-      qN6_->weight = rN6._weights; 
-      qN8_->weight = rN8._weights;
-
-   }
-
-   flowTree_->Fill();
+   //Reset correlators and their Q vectors
    doneDiagQ();
    doneNonDiagQ();
+   resetQvectors();
 }
 
 
@@ -635,6 +613,21 @@ QVectorTreeProducer::doneNonDiagQ()
 //   qNMvec_.clear();
 }
 
+void
+QVectorTreeProducer::resetQvectors()
+{
+   for(unsigned int ieta = 0; ieta < nEtaBinTrk_; ++ieta)
+   {
+      vQn_trkP_[ieta]->reset();
+      vQn_trkN_[ieta]->reset();
+   }
+   for(unsigned int ieta = 0; ieta < nEtaBinHF_; ++ieta)
+   {
+      vQn_hfP_[ieta]->reset();
+      vQn_hfM_[ieta]->reset();
+   } 
+}
+
 double
 QVectorTreeProducer::getAccEffWeight(double eta, double pt)
 {
@@ -661,6 +654,200 @@ QVectorTreeProducer::getAccEffWeight(double eta, double pt)
    }
    return weight;
 }
+
+void
+QVectorTreeProducer::fillHisto(double weight)
+{
+   htrk_eta_ref_->Fill(trkSelectorRef_.getTrk().eta);
+   htrk_phi_ref_->Fill(trkSelectorRef_.getTrk().phi);
+   htrk_pt_ref_ ->Fill(trkSelectorRef_.getTrk().pt);
+
+   htrk_eta_corr_ref_->Fill(trkSelectorRef_.getTrk().eta, weight);
+   htrk_phi_corr_ref_->Fill(trkSelectorRef_.getTrk().phi, weight);
+   htrk_pt_corr_ref_ ->Fill(trkSelectorRef_.getTrk().pt,  weight);
+
+   if(trkSelectorRef_.getTrk().dzerror != 0.) 
+      htrk_dzdzerr_ref_    ->Fill(trkSelectorRef_.getTrk().dzvtx/trkSelectorRef_.getTrk().dzerror);
+   if(trkSelectorRef_.getTrk().d0error != 0.) 
+      htrk_d0d0err_ref_    ->Fill(trkSelectorRef_.getTrk().d0vtx/trkSelectorRef_.getTrk().d0error);
+   if(trkSelectorRef_.getTrk().pt      != 0.) 
+      htrk_ptpterr_ref_    ->Fill(trkSelectorRef_.getTrk().pterror/trkSelectorRef_.getTrk().pt);
+   if(trkSelectorRef_.getTrk().nlayers != 0.) 
+      htrk_chi2nlayers_ref_->Fill(trkSelectorRef_.getTrk().chi2n/trkSelectorRef_.getTrk().nlayers);
+   htrk_nhits_ref_->Fill(trkSelectorRef_.getTrk().nhits);
+   htrk_algo_ref_ ->Fill(trkSelectorRef_.getTrk().algo);
+   //--
+   htrk_eta_off_->Fill(trkSelectorOff_.getTrk().eta);
+   htrk_phi_off_->Fill(trkSelectorOff_.getTrk().phi);
+   htrk_pt_off_ ->Fill(trkSelectorOff_.getTrk().pt);
+
+   htrk_eta_corr_off_->Fill(trkSelectorOff_.getTrk().eta, weight);
+   htrk_phi_corr_off_->Fill(trkSelectorOff_.getTrk().phi, weight);
+   htrk_pt_corr_off_ ->Fill(trkSelectorOff_.getTrk().pt,  weight);
+
+   if(trkSelectorOff_.getTrk().dzerror != 0.) 
+      htrk_dzdzerr_off_    ->Fill(trkSelectorOff_.getTrk().dzvtx/trkSelectorOff_.getTrk().dzerror);
+   if(trkSelectorOff_.getTrk().d0error != 0.) 
+      htrk_d0d0err_off_    ->Fill(trkSelectorOff_.getTrk().d0vtx/trkSelectorOff_.getTrk().d0error);
+   if(trkSelectorOff_.getTrk().pt      != 0.) 
+      htrk_ptpterr_off_    ->Fill(trkSelectorOff_.getTrk().pterror/trkSelectorOff_.getTrk().pt);
+   if(trkSelectorOff_.getTrk().nlayers != 0.) 
+      htrk_chi2nlayers_off_->Fill(trkSelectorOff_.getTrk().chi2n/trkSelectorOff_.getTrk().nlayers);
+   htrk_nhits_off_->Fill(trkSelectorOff_.getTrk().nhits);
+   htrk_algo_off_ ->Fill(trkSelectorOff_.getTrk().algo);
+}
+
+void
+QVectorTreeProducer::fillQVectorCorr(double weight)
+{
+      for(unsigned int iharm = 0; iharm < nHarmTrk_; ++iharm)
+      {
+      //-- Diagonal
+         qNvec_[iharm].fill(trkSelectorRef_.getTrk().phi, weight);
+      //-- Non diagonal
+         for(unsigned int jharm = iharm+1; jharm < nHarmTrk_; ++jharm)
+         {
+             qNMvec_[iharm][jharm-iharm-1].fill(trkSelectorRef_.getTrk().phi, weight);
+         }
+      }
+}
+
+void
+QVectorTreeProducer::fillQVectorTrk(double weight)
+{
+      int etaIdx = -1;
+      for(unsigned int ieta = 0; ieta < nEtaBinTrk_; ++ieta)
+      {
+         if(trkSelectorRef_.getTrk().eta >= (MinEtaRef_ + ieta    *EtaBinWidthTrk_) && 
+            trkSelectorRef_.getTrk().eta <  (MinEtaRef_ + (ieta+1)*EtaBinWidthTrk_) &&
+            ieta != nEtaBinTrk_-1)
+         {
+              etaIdx = ieta;
+         }
+         else if(trkSelectorRef_.getTrk().eta >= (MinEtaRef_ + ieta    *EtaBinWidthTrk_) && 
+                 trkSelectorRef_.getTrk().eta <= (MinEtaRef_ + (ieta+1)*EtaBinWidthTrk_) &&
+                 ieta == nEtaBinTrk_-1)
+         {
+              etaIdx = ieta;
+         }
+      }
+      if(etaIdx < 0)
+      {
+         edm::LogInfo("Track out of Qvector eta range") << "The track with eta = " << trkSelectorRef_.getTrk().eta << " is not filled in the Qvectors";
+         return;
+      }
+      else
+      {
+         if(trkSelectorRef_.getTrk().charge > 0) vQn_trkP_[etaIdx]->fill(trkSelectorRef_.getTrk().phi, weight);
+         if(trkSelectorRef_.getTrk().charge < 0) vQn_trkN_[etaIdx]->fill(trkSelectorRef_.getTrk().phi, weight);
+      }
+}
+
+void
+QVectorTreeProducer::fillQVectorHF(double weight)
+{
+}
+
+void
+QVectorTreeProducer::fillCorrelators()
+{
+   //-- Diagonal
+   correlations::Result rN2; 
+   correlations::Result rN4;
+   correlations::Result rN6;
+   correlations::Result rN8;
+   //-- Non diagonal
+   correlations::Result rNM4;
+   if(nHarmTrk_ != 0)
+   {
+      for(unsigned int iharm = 0; iharm < nHarmTrk_; ++iharm)
+      {
+         //-- Diagonal
+         rN2 = cqNvec_[iharm]->calculate(2, hcNvec_[iharm]);
+         rN4 = cqNvec_[iharm]->calculate(4, hcNvec_[iharm]);
+         rN6 = cqNvec_[iharm]->calculate(6, hcNvec_[iharm]);
+         rN8 = cqNvec_[iharm]->calculate(8, hcNvec_[iharm]);
+         
+         qN2_->corr[iharm] = TComplex(rN2._sum.real(), rN2._sum.imag());
+         qN4_->corr[iharm] = TComplex(rN4._sum.real(), rN4._sum.imag());
+         qN6_->corr[iharm] = TComplex(rN6._sum.real(), rN6._sum.imag());
+         qN8_->corr[iharm] = TComplex(rN8._sum.real(), rN8._sum.imag());
+
+
+         //-- Non diagonal
+         for(unsigned int jharm = iharm+1; jharm < nHarmTrk_; ++jharm)
+         {
+            rNM4 = cqNMvec_[iharm][jharm-iharm-1]->calculate(4, hcNMvec_[iharm][jharm-iharm-1]);
+
+            qNM4_[iharm]->corr[jharm-iharm-1] = TComplex(rNM4._sum.real(), rNM4._sum.imag());
+         }
+
+         if(iharm < nHarmTrk_ -1)
+         {
+            qNM4_[iharm]->weight = rNM4._weights;
+         }
+      }
+      qN2_->weight = rN2._weights; 
+      qN4_->weight = rN4._weights; 
+      qN6_->weight = rN6._weights; 
+      qN8_->weight = rN8._weights;
+      //std::cout << "<2> = " << TComplex(rN2._sum.real(), rN2._sum.imag()) << std::endl;
+      //std::cout << "<2> weight = " << qN2_->weight << std::endl;  
+   }
+}
+
+void 
+QVectorTreeProducer::fillEPangle(const edm::Handle<reco::EvtPlaneCollection> & ep)
+{
+   //----- Event Plane selection ----
+   //Index     Name   Detector Order hmin1 hmax1 hmin2 hmax2 minpt maxpt
+   //    0      HFm1        HF     1 -5.00 -3.00  0.00  0.00  0.01 30.00
+   //    1      HFp1        HF     1  3.00  5.00  0.00  0.00  0.01 30.00
+   //    2       HF1        HF     1 -5.00 -3.00  3.00  5.00  0.01 30.00
+   //    6      HFm2        HF     2 -5.00 -3.00  0.00  0.00  0.01 30.00
+   //    7      HFp2        HF     2  3.00  5.00  0.00  0.00  0.01 30.00
+   //    8       HF2        HF     2 -5.00 -3.00  3.00  5.00  0.01 30.00
+   //   13      HFm3        HF     3 -5.00 -3.00  0.00  0.00  0.01 30.00
+   //   14      HFp3        HF     3  3.00  5.00  0.00  0.00  0.01 30.00
+   //   15       HF3        HF     3 -5.00 -3.00  3.00  5.00  0.01 30.00
+   //   19      HFm4        HF     4 -5.00 -3.00  0.00  0.00  0.01 30.00
+   //   20      HFp4        HF     4  3.00  5.00  0.00  0.00  0.01 30.00
+   //   21       HF4        HF     4 -5.00 -3.00  3.00  5.00  0.01 30.00
+   //   25    HFm1mc        HF     1 -5.00 -3.00  0.00  0.00  0.01 30.00
+   //   26    HFp1mc        HF     1  3.00  5.00  0.00  0.00  0.01 30.00
+   unsigned int HFm[4] = {0, 6, 13, 19};
+   unsigned int HFp[4] = {1, 7, 14, 20};
+   unsigned int HF[4]  = {2, 8, 15, 21};
+
+   if(ep.isValid())
+   {
+      //psi1
+      if(HFm[0] < ep->size()) HFmPsi_.psi1 = (*ep)[HFm[0]].angle(epLvl_);
+      if(HFp[0] < ep->size()) HFpPsi_.psi1 = (*ep)[HFp[0]].angle(epLvl_);
+      if(HF[0]  < ep->size()) HFPsi_.psi1  = (*ep)[HF[0]].angle(epLvl_);
+
+      //psi2
+      if(HFm[1] < ep->size()) HFmPsi_.psi2 = (*ep)[HFm[1]].angle(epLvl_);
+      if(HFp[1] < ep->size()) HFpPsi_.psi2 = (*ep)[HFp[1]].angle(epLvl_);
+      if(HF[1]  < ep->size()) HFPsi_.psi2  = (*ep)[HF[1]].angle(epLvl_);
+
+      //psi3
+      if(HFm[2] < ep->size()) HFmPsi_.psi3 = (*ep)[HFm[2]].angle(epLvl_);
+      if(HFp[2] < ep->size()) HFpPsi_.psi3 = (*ep)[HFp[2]].angle(epLvl_);
+      if(HF[2]  < ep->size()) HFPsi_.psi3  = (*ep)[HF[2]].angle(epLvl_);
+
+      //psi4
+      if(HFm[3] < ep->size()) HFmPsi_.psi4 = (*ep)[HFm[3]].angle(epLvl_);
+      if(HFp[3] < ep->size()) HFpPsi_.psi4 = (*ep)[HFp[3]].angle(epLvl_);
+      if(HF[3]  < ep->size()) HFPsi_.psi4  = (*ep)[HF[3]].angle(epLvl_);
+   }
+   else
+   {
+       edm::LogWarning ("Invalid value") << "Invalid EP value";
+   }
+
+}
+
 
 //define this as a plug-in
 DEFINE_FWK_MODULE(QVectorTreeProducer);

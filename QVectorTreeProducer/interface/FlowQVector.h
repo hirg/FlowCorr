@@ -1,5 +1,5 @@
-#ifndef FLOWEP_H
-#define FLOWEP_H
+#ifndef FLOWQVECTOR_H
+#define FLOWQVECTOR_H
 // -*- C++ -*-
 //
 // Package:    FlowCorr/QVectorTreeProducer
@@ -34,6 +34,7 @@ class FlowQVector {
       ~FlowQVector();
 
       void fill(double phi, double weight);
+      void reset();
 
       std::vector< std::complex<double> > corr;
       

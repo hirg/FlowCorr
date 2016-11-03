@@ -6,7 +6,7 @@ process.load("FWCore.MessageService.MessageLogger_cfi")
 process.MessageLogger.cerr.FwkReport.reportEvery = 1
 
 process.maxEvents = cms.untracked.PSet( 
-   input = cms.untracked.int32(10)
+   input = cms.untracked.int32(-1)
 )
 
 process.options = cms.untracked.PSet(
@@ -17,7 +17,7 @@ process.options = cms.untracked.PSet(
 process.source = cms.Source("PoolSource",
     fileNames = cms.untracked.vstring(
         'root://cms-xrd-global.cern.ch///store/user/qwang/HIMinimumBias3/HIMinBias_v2/160128_201904/0000/HIMinBias_10.root',
-        'root://cms-xrd-global.cern.ch///store/user/qwang/HIMinimumBias3/HIMinBias_v2/160128_201904/0000/HIMinBias_100.root'
+        #'root://cms-xrd-global.cern.ch///store/user/qwang/HIMinimumBias3/HIMinBias_v2/160128_201904/0000/HIMinBias_100.root'
     )
 )
 

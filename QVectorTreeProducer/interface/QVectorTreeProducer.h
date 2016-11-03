@@ -49,8 +49,9 @@
 #include <TH2D.h>
 
 #include <FlowCorr/QVectorTreeProducer/interface/FlowCorrelator.h>
-#include <FlowCorr/QVectorTreeProducer/interface/FlowTrackSelection.h>
 #include <FlowCorr/QVectorTreeProducer/interface/FlowUtils.h>
+#include <FlowCorr/QVectorTreeProducer/interface/FlowQVector.h>
+#include <FlowCorr/QVectorTreeProducer/interface/FlowTrackSelection.h>
 #include <FlowCorr/QVectorTreeProducer/interface/correlations/Types.hh>
 #include <FlowCorr/QVectorTreeProducer/interface/correlations/Result.hh>
 #include <FlowCorr/QVectorTreeProducer/interface/correlations/QVector.hh>
@@ -128,6 +129,9 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
 
       // ## calotower ##
       edm::EDGetTokenT<CaloTowerCollection> caloTowerToken_;
+      double MinEtHF_;
+      double MinEtaHF_;
+      double MaxEtaHF_;
 
       // ## centrality ##	
       edm::EDGetTokenT<reco::Centrality> centralityToken_;
@@ -199,8 +203,16 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
       std::vector<FlowCorrelator*> qNM4_;
       //   --- diagonal terms w/ gap
 
-      // ## gap ##
-      double Gap_;
+      // ## Qvector eta binning && gap ##
+      double EtaBinWidthTrk_;
+      unsigned int nEtaBinTrk_;
+      double EtaBinWidthHF_;
+      unsigned int nEtaBinHF_;
+
+      std::vector<FlowQVector*> vQn_trkP_; 
+      std::vector<FlowQVector*> vQn_trkN_; 
+      std::vector<FlowQVector*> vQn_hfP_; 
+      std::vector<FlowQVector*> vQn_hfM_; 
 
       // ## Acc x Eff correction ##
       TFile * fEff_;
@@ -240,7 +252,9 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
       TFileDirectory flowHistListRef_;
       TFileDirectory flowHistListOff_;
 
-      TTree* flowTree_;
+      TTree* globalTree_;
+      TTree* correlatorTree_;
+      TTree* qvectorTree_;
 
       // ---------- public methods ------------
       bool isEventSelected(const edm::Event& iEvent, 
@@ -251,6 +265,13 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
       void initNonDiagQ();
       void doneDiagQ();
       void doneNonDiagQ();
+      void resetQvectors();
       double getAccEffWeight(double eta, double pt);
+      void fillHisto(double weight);
+      void fillQVectorCorr(double weight);
+      void fillQVectorTrk(double weight);
+      void fillQVectorHF(double weight);
+      void fillCorrelators();
+      void fillEPangle(const edm::Handle<reco::EvtPlaneCollection> & ep);
 };
 

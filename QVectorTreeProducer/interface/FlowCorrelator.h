@@ -1,5 +1,5 @@
-#ifndef FLOWEP_H
-#define FLOWEP_H
+#ifndef FLOWCORRELATOR_H
+#define FLOWCORRELATOR_H
 // -*- C++ -*-
 //
 // Package:    FlowCorr/QVectorTreeProducer

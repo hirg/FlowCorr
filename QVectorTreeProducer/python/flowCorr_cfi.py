@@ -42,6 +42,9 @@ flowCorr = cms.EDAnalyzer('QVectorTreeProducer',
 
      #calotower
      caloTower = cms.InputTag('towerMaker'),
+     minEt     = cms.untracked.double(0.),
+     minEtaHF  = cms.untracked.double(2.9),
+     maxEtaHF  = cms.untracked.double(5.1),
 
      #centrality
      centralitySrc    = cms.InputTag('hiCentrality'),
@@ -54,12 +57,16 @@ flowCorr = cms.EDAnalyzer('QVectorTreeProducer',
      epLvl    = cms.untracked.int32(0),
 
      #harmonics
-     vHarmTrk = cms.untracked.vint32(2,3,4,5,6,7),  
-     vHarmHF  = cms.untracked.vint32(2,3,4,5,6,7),
+     vHarmTrk = cms.untracked.vint32(1,2,3,4,5,6,7),  
+     vHarmHF  = cms.untracked.vint32(1,2,3,4,5,6,7),
 
      #cumulant
      cMode   = cms.untracked.int32(2),
      cWeight = cms.untracked.bool(True), 
+
+     #eta binning of QVector
+     etaBinWidthTrk = cms.untracked.double(0.1),
+     etaBinWidthHF  = cms.untracked.double(0.1),
 
      #file acc x eff x fake
      fName      = cms.untracked.InputTag('EffCorrectionsPixel_TT_pt_0_10_v2.root'),

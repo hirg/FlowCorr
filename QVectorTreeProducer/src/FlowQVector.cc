@@ -18,6 +18,7 @@
 
 
 // system include files
+#include <iostream> 
 #include <algorithm> 
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
@@ -33,11 +34,11 @@ vHarm_(std::vector<int>(1,0))
 FlowQVector::FlowQVector(std::vector<int> vHarm) :
 vHarm_(vHarm)
 {
-   if(find(vHarm_.begin(), vHarm_.end(), 0) == vHarm.end() && !vHarm.empty())
+   if(find(vHarm_.begin(), vHarm_.end(), 0) == vHarm_.end() && !vHarm_.empty())
    {
-     edm::LogWarning("Missing crucial harmonic") << "Harmonic 0 is not present in the harmonic vector" << std::endl  
-                                                 << "Harmonic 0 will be filled into the vector to compute weights"; 
-     vHarm_.insert(vHarm.begin(), 0);
+     edm::LogInfo("Missing crucial harmonic") << "Harmonic 0 is not present in the harmonic vector \n" 
+                                              << "We will insert it in the vector"; 
+     vHarm_.insert(vHarm_.begin(), 0);
    }
    corr.resize(vHarm_.size());
 
@@ -59,5 +60,15 @@ FlowQVector::fill(double phi, double weight)
    for(unsigned int iharm = 0; iharm < vHarm_.size(); iharm++)
    {
       corr[iharm] += std::complex<double>(weight * cos(vHarm_[iharm] * phi), weight * sin(vHarm_[iharm] * phi));
+   }
+}
+
+void
+FlowQVector::reset()
+{
+   corr.clear();
+   for(unsigned int iharm = 0; iharm < vHarm_.size(); iharm++)
+   {
+      corr[iharm] = std::complex<double>(0., 0.);
    }
 }

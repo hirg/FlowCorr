@@ -1,4 +1,4 @@
 <lcgdict>
-<class name="FlowQVector"/>
 <class name="FlowCorrelator"/>
+<class name="FlowQVector"/>
 </lcgdict>
