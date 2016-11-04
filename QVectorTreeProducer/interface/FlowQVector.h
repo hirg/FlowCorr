@@ -42,4 +42,6 @@ class FlowQVector {
       std::vector<int> vHarm_;
 };
 
+typedef std::vector<FlowQVector*> FlowQVectorCollection;
+
 #endif

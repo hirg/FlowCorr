@@ -52,6 +52,7 @@
 #include <FlowCorr/QVectorTreeProducer/interface/FlowUtils.h>
 #include <FlowCorr/QVectorTreeProducer/interface/FlowQVector.h>
 #include <FlowCorr/QVectorTreeProducer/interface/FlowTrackSelection.h>
+#include <FlowCorr/QVectorTreeProducer/interface/FlowTowerSelection.h>
 #include <FlowCorr/QVectorTreeProducer/interface/correlations/Types.hh>
 #include <FlowCorr/QVectorTreeProducer/interface/correlations/Result.hh>
 #include <FlowCorr/QVectorTreeProducer/interface/correlations/QVector.hh>
@@ -172,6 +173,7 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
 
       // ## calotower ##
       double Etmin_;
+      FlowTowerSelection towSelector_;
 
       // ## centrality ##
       int Cent_;
@@ -209,10 +211,10 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
       double EtaBinWidthHF_;
       unsigned int nEtaBinHF_;
 
-      std::vector<FlowQVector*> vQn_trkP_; 
-      std::vector<FlowQVector*> vQn_trkN_; 
-      std::vector<FlowQVector*> vQn_hfP_; 
-      std::vector<FlowQVector*> vQn_hfM_; 
+      FlowQVectorCollection vQn_trkP_; 
+      FlowQVectorCollection vQn_trkN_; 
+      FlowQVectorCollection vQn_hfP_; 
+      FlowQVectorCollection vQn_hfM_; 
 
       // ## Acc x Eff correction ##
       TFile * fEff_;
@@ -248,13 +250,22 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
       TH1F* htrk_chi2nlayers_off_;
       TH1I* htrk_nhits_off_;
       TH1I* htrk_algo_off_; 
-
+      //--
+      TH1F* hHF_eta_tow_;
+      TH1F* hHF_et_tow_;
+      TH1F* hHF_et_tow_p_;
+      TH1F* hHF_et_tow_m_;
+      TH1F* hHF_phi_tow_;
+      //--
       TFileDirectory flowHistListRef_;
       TFileDirectory flowHistListOff_;
-
+      TFileDirectory flowHistListHF_;
+      //--
       TTree* globalTree_;
       TTree* correlatorTree_;
-      TTree* qvectorTree_;
+      TTree* qvectorTreeTrk_;
+      TTree* qvectorTreeHF_p_;
+      TTree* qvectorTreeHF_m_;
 
       // ---------- public methods ------------
       bool isEventSelected(const edm::Event& iEvent, 
@@ -267,10 +278,11 @@ class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
       void doneNonDiagQ();
       void resetQvectors();
       double getAccEffWeight(double eta, double pt);
-      void fillHisto(double weight);
+      void fillHistoTrk(double weight);
+      void fillHistoHF();
       void fillQVectorCorr(double weight);
       void fillQVectorTrk(double weight);
-      void fillQVectorHF(double weight);
+      void fillQVectorHF(double weight, double eta, double phi);
       void fillCorrelators();
       void fillEPangle(const edm::Handle<reco::EvtPlaneCollection> & ep);
 };

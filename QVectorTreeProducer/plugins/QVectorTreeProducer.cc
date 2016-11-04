@@ -70,7 +70,7 @@ QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
    nVtxMax_(iConfig.getUntrackedParameter<int>("nVtxMax", 9999)),
 // #CaloTower
    caloTowerToken_(consumes<CaloTowerCollection>(iConfig.getParameter<edm::InputTag>("caloTower"))),
-   MinEtHF_(iConfig.getUntrackedParameter<double>("minEta",0.)),
+   MinEtHF_(iConfig.getUntrackedParameter<double>("minEt",0.)),
    MinEtaHF_(iConfig.getUntrackedParameter<double>("minEtaHF",2.9)),
    MaxEtaHF_(iConfig.getUntrackedParameter<double>("maxEtaHF",5.1)),
 // #Centrality
@@ -182,7 +182,14 @@ QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
    cutsRef.nhits        = nHitsRef_; 
    cutsRef.algo         = trkAlgoRef_; 
    cutsRef.charge       = ChargeRef_;
-   trkSelectorRef_ = FlowTrackSelection(cutsRef); 
+   trkSelectorRef_ = FlowTrackSelection(cutsRef);
+
+   //Tower selector
+   sTowCut cutsTow; 
+   cutsTow.etamin = MinEtaHF_; 
+   cutsTow.etamax = MaxEtaHF_; 
+   cutsTow.etmin  = MinEtHF_;
+   towSelector_ = FlowTowerSelection(cutsTow); 
   
    edm::Service<TFileService> fs;
    //Histo && TFileDirectory
@@ -213,6 +220,13 @@ QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
    htrk_chi2nlayers_off_ = flowHistListOff_.make<TH1F>("htrk_chi2nlayers_off" , "", 200, 0., 1.);
    htrk_nhits_off_    = flowHistListOff_.make<TH1I>("htrk_nhits_off"   , "", 100,   0,  100);
    htrk_algo_off_     = flowHistListOff_.make<TH1I>("htrk_algo_off"    , "", 20,    0,  20);
+   //--
+   flowHistListHF_ = fs->mkdir("tow_HFHists");
+   hHF_eta_tow_   = flowHistListHF_.make<TH1F>("hHF_eta_tow",      "", 120,  -6., 6.);
+   hHF_et_tow_    = flowHistListHF_.make<TH1F>("hHF_et_tow" ,      "", 1000,  0,  100.);
+   hHF_et_tow_p_  = flowHistListHF_.make<TH1F>("hHF_et_tow_plus",  "", 1000,  0,  100.);
+   hHF_et_tow_m_  = flowHistListHF_.make<TH1F>("hHF_et_tow_minus", "", 1000,  0,  100.);
+   hHF_phi_tow_   = flowHistListHF_.make<TH1F>("hHF_phi_tow",      "", 40,   -4., 4.);
    //TTree
    globalTree_ = fs->make<TTree>("globalTree", "globalTree");
    globalTree_->Branch("Event",    &Evt_,    "noff_corr/D:nref_corr:run/I:event:lumi:cent:noff:nref");
@@ -231,18 +245,21 @@ QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
       correlatorTree_->Branch(Form("<4>_%dm",vHarmTrk_[iharm]), "FlowCorrelator", &qNM4_[iharm], 32000, 3);
    }
    //--
-   qvectorTree_ = fs->make<TTree>("qvectorTree","qvectorTree");
+   qvectorTreeTrk_ = fs->make<TTree>("qvectorTree_Trk","qvectorTree_Trk");
    for(unsigned int ieta = 0; ieta < nEtaBinTrk_; ++ieta)
    {
       if(find(ChargeRef_.begin(), ChargeRef_.end(),  1) != ChargeRef_.end())
-         qvectorTree_->Branch(Form("Qtrk_p_%d",ieta), "FlowQVector", &vQn_trkP_[ieta], 32000, 3);
+         qvectorTreeTrk_->Branch(Form("Qtrk_p_%d",ieta), "FlowQVector", &vQn_trkP_[ieta], 32000, 3);
       if(find(ChargeRef_.begin(), ChargeRef_.end(), -1) != ChargeRef_.end()) 
-         qvectorTree_->Branch(Form("Qtrk_n_%d",ieta), "FlowQVector", &vQn_trkN_[ieta], 32000, 3);
+         qvectorTreeTrk_->Branch(Form("Qtrk_n_%d",ieta), "FlowQVector", &vQn_trkN_[ieta], 32000, 3);
    }
+   //--
+   qvectorTreeHF_p_ = fs->make<TTree>("qvectorTree_HFp","qvectorTree_HFp");
+   qvectorTreeHF_m_ = fs->make<TTree>("qvectorTree_HFm","qvectorTree_HFm");
    for(unsigned int ieta = 0; ieta < nEtaBinHF_; ++ieta)
    {
-      qvectorTree_->Branch(Form("QHF_p_%d",ieta), "FlowQVector", &vQn_hfP_[ieta], 32000, 3);
-      qvectorTree_->Branch(Form("QHF_m_%d",ieta), "FlowQVector", &vQn_hfM_[ieta], 32000, 3);
+      qvectorTreeHF_p_->Branch(Form("QHF_p_%d",ieta), "FlowQVector", &vQn_hfP_[ieta], 32000, 3);
+      qvectorTreeHF_m_->Branch(Form("QHF_m_%d",ieta), "FlowQVector", &vQn_hfM_[ieta], 32000, 3);
    }
 }
 
@@ -376,7 +393,11 @@ QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
   
    nRef_     = 0;
    nRefcorr_ = 0.;
-   for(reco::TrackCollection::const_iterator itTrk = tracks->begin(); itTrk != tracks->end(); ++itTrk)
+
+   //Loop on tracks
+   for(reco::TrackCollection::const_iterator itTrk = tracks->begin(); 
+       itTrk != tracks->end(); 
+       ++itTrk)
    {
       trkSelectorRef_.resetVar(); 
       trkSelectorRef_.fillVar(*itTrk, Vtx_, trackQualityTag_);
@@ -394,23 +415,37 @@ QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
       nRefcorr_ += weight;
 
       //Fill histos
-      fillHisto(weight);
+      fillHistoTrk(weight);
 
       //Filling Qvectors for correlators
       fillQVectorCorr(weight);
 
       //Filling trk QVectors for the QVector tree
       fillQVectorTrk(weight);
+   }
+
+   //Loop on calo towers
+   for (CaloTowerCollection::const_iterator itHF = calotowers->begin();
+        itHF != calotowers->end();
+        ++itHF)
+   {
+      towSelector_.resetVar(); 
+      towSelector_.fillVar(*itHF);
+      if(!towSelector_.isTowerPassCuts()) continue; 
+
+      //Fill histos
+      fillHistoHF();
 
       //Filling HF QVectors for the QVector tree
-      //fillQVectorHF(weight);
+      fillQVectorHF(towSelector_.getTower().weight, 
+                    towSelector_.getTower().eta, 
+                    towSelector_.getTower().phi);
    }
 
    //qNvec_[0].print();
    //std::cout << "qvector from me" << std::endl;
    //std::cout << vQn_trkP_[0]->corr[0]+vQn_trkN_[0]->corr[0] << std::endl; 
    //std::cout << vQn_trkP_[0]->corr[1]+vQn_trkN_[0]->corr[1] << std::endl; 
-
 
    if(nOff_ != 0) Evt_.noff = nOff_; 
    if(nRef_ != 0) Evt_.nref = nRef_; 
@@ -424,7 +459,9 @@ QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
    //Fill TTrees
    globalTree_->Fill();
    correlatorTree_->Fill();
-   qvectorTree_->Fill();
+   qvectorTreeTrk_->Fill();
+   qvectorTreeHF_p_->Fill();
+   qvectorTreeHF_m_->Fill();
 
    //Reset correlators and their Q vectors
    doneDiagQ();
@@ -656,7 +693,7 @@ QVectorTreeProducer::getAccEffWeight(double eta, double pt)
 }
 
 void
-QVectorTreeProducer::fillHisto(double weight)
+QVectorTreeProducer::fillHistoTrk(double weight)
 {
    htrk_eta_ref_->Fill(trkSelectorRef_.getTrk().eta);
    htrk_phi_ref_->Fill(trkSelectorRef_.getTrk().phi);
@@ -698,6 +735,18 @@ QVectorTreeProducer::fillHisto(double weight)
 }
 
 void
+QVectorTreeProducer::fillHistoHF()
+{
+   hHF_eta_tow_ ->Fill(towSelector_.getTower().eta);
+   hHF_et_tow_  ->Fill(towSelector_.getTower().et);
+   if(towSelector_.getTower().eta > 0.) 
+      hHF_et_tow_p_->Fill(towSelector_.getTower().et);
+   if(towSelector_.getTower().eta < 0.) 
+      hHF_et_tow_m_->Fill(towSelector_.getTower().et);
+   hHF_phi_tow_ ->Fill(towSelector_.getTower().phi);
+}
+
+void
 QVectorTreeProducer::fillQVectorCorr(double weight)
 {
       for(unsigned int iharm = 0; iharm < nHarmTrk_; ++iharm)
@@ -733,7 +782,9 @@ QVectorTreeProducer::fillQVectorTrk(double weight)
       }
       if(etaIdx < 0)
       {
-         edm::LogInfo("Track out of Qvector eta range") << "The track with eta = " << trkSelectorRef_.getTrk().eta << " is not filled in the Qvectors";
+         edm::LogInfo("Track out of Qvector eta range") << "The track with eta = " 
+                                                        << trkSelectorRef_.getTrk().eta 
+                                                        << " is not filled in the Qvectors";
          return;
       }
       else
@@ -744,8 +795,36 @@ QVectorTreeProducer::fillQVectorTrk(double weight)
 }
 
 void
-QVectorTreeProducer::fillQVectorHF(double weight)
+QVectorTreeProducer::fillQVectorHF(double weight, double eta, double phi)
 {
+      int etaIdx = -1;
+      for(unsigned int ieta = 0; ieta < nEtaBinHF_; ++ieta)
+      {
+         if(fabs(eta) >= (MinEtaHF_ + ieta    *EtaBinWidthHF_) && 
+            fabs(eta) <  (MinEtaHF_ + (ieta+1)*EtaBinWidthHF_) &&
+            ieta != nEtaBinHF_-1)
+         {
+              etaIdx = ieta;
+         }
+         else if(fabs(eta) >= (MinEtaHF_ + ieta    *EtaBinWidthHF_) && 
+                 fabs(eta) <= (MinEtaHF_ + (ieta+1)*EtaBinWidthHF_) &&
+                 ieta == nEtaBinHF_-1)
+         {
+              etaIdx = ieta;
+         }
+      }
+      if(etaIdx < 0)
+      {
+         edm::LogInfo("Tower out of Qvector eta range") << "The tower with eta = " 
+                                                        << eta 
+                                                        << " is not filled in the Qvectors";
+         return;
+      }
+      else
+      {
+         if(eta > 0) vQn_hfP_[etaIdx]->fill(phi, weight);
+         if(eta < 0) vQn_hfM_[etaIdx]->fill(phi, weight);
+      }
 }
 
 void
