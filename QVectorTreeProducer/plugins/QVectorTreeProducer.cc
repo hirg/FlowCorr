@@ -789,8 +789,8 @@ QVectorTreeProducer::fillQVectorTrk(double weight)
       }
       else
       {
-         if(trkSelectorRef_.getTrk().charge > 0) vQn_trkP_[etaIdx]->fill(trkSelectorRef_.getTrk().phi, weight);
-         if(trkSelectorRef_.getTrk().charge < 0) vQn_trkN_[etaIdx]->fill(trkSelectorRef_.getTrk().phi, weight);
+         if(trkSelectorRef_.getTrk().charge > 0) vQn_trkP_[etaIdx]->fill(trkSelectorRef_.getTrk().phi, weight, vHarmTrk_);
+         if(trkSelectorRef_.getTrk().charge < 0) vQn_trkN_[etaIdx]->fill(trkSelectorRef_.getTrk().phi, weight, vHarmTrk_);
       }
 }
 
@@ -822,8 +822,8 @@ QVectorTreeProducer::fillQVectorHF(double weight, double eta, double phi)
       }
       else
       {
-         if(eta > 0) vQn_hfP_[etaIdx]->fill(phi, weight);
-         if(eta < 0) vQn_hfM_[etaIdx]->fill(phi, weight);
+         if(eta > 0) vQn_hfP_[etaIdx]->fill(phi, weight, vHarmHF_);
+         if(eta < 0) vQn_hfM_[etaIdx]->fill(phi, weight, vHarmHF_);
       }
 }
 

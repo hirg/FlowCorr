@@ -25,50 +25,51 @@
 #include "FlowCorr/QVectorTreeProducer/interface/FlowQVector.h"
 
 FlowQVector::FlowQVector() :
-corr(std::vector< std::complex<double> >(1, std::complex<double>(0.,0.))),
-vHarm_(std::vector<int>(1,0))
+qv(std::vector< std::complex<double> >(1, std::complex<double>(0.,0.)))
 {
 
 }
 
-FlowQVector::FlowQVector(std::vector<int> vHarm) :
-vHarm_(vHarm)
+FlowQVector::FlowQVector(std::vector<int> vHarm)
 {
-   if(find(vHarm_.begin(), vHarm_.end(), 0) == vHarm_.end() && !vHarm_.empty())
+   if(find(vHarm.begin(), vHarm.end(), 0) == vHarm.end() && !vHarm.empty())
    {
      edm::LogInfo("Missing crucial harmonic") << "Harmonic 0 is not present in the harmonic vector \n" 
                                               << "We will insert it in the vector"; 
-     vHarm_.insert(vHarm_.begin(), 0);
+     vHarm.insert(vHarm.begin(), 0);
    }
-   corr.resize(vHarm_.size());
+   qv.resize(vHarm.size());
 
-   for(unsigned int iharm = 0; iharm < corr.size(); ++iharm)
+   for(unsigned int iharm = 0; iharm < qv.size(); ++iharm)
    {  
-      corr[iharm] = std::complex<double>(0, 0);
+      qv[iharm] = std::complex<double>(0, 0);
    } 
 }
 
 FlowQVector::~FlowQVector()
 {
-   corr.clear();
+   qv.clear();
 }
 
 void
-FlowQVector::fill(double phi, double weight)
+FlowQVector::fill(double phi, double weight, std::vector<int> vHarm)
 {
 
-   for(unsigned int iharm = 0; iharm < vHarm_.size(); iharm++)
+   for(unsigned int iharm = 0; iharm < qv.size(); iharm++)
    {
-      corr[iharm] += std::complex<double>(weight * cos(vHarm_[iharm] * phi), weight * sin(vHarm_[iharm] * phi));
+      if(iharm == 0) qv[iharm] += std::complex<double>(weight * cos(0. * phi), 
+                                                       weight * sin(0. * phi));
+      else           qv[iharm] += std::complex<double>(weight * cos(vHarm[iharm-1] * phi), 
+                                                       weight * sin(vHarm[iharm-1] * phi));
    }
 }
 
 void
 FlowQVector::reset()
 {
-   corr.clear();
-   for(unsigned int iharm = 0; iharm < vHarm_.size(); iharm++)
+   qv.clear();
+   for(unsigned int iharm = 0; iharm < qv.size(); iharm++)
    {
-      corr[iharm] = std::complex<double>(0., 0.);
+      qv[iharm] = std::complex<double>(0., 0.);
    }
 }

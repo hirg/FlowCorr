@@ -33,13 +33,11 @@ class FlowQVector {
       FlowQVector(std::vector<int> vHarm);
       ~FlowQVector();
 
-      void fill(double phi, double weight);
+      void fill(double phi, double weight, std::vector<int> vHarm);
       void reset();
-
-      std::vector< std::complex<double> > corr;
       
    private:
-      std::vector<int> vHarm_;
+      std::vector< std::complex<double> > qv;
 };
 
 typedef std::vector<FlowQVector*> FlowQVectorCollection;
