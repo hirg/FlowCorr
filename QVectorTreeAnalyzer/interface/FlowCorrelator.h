@@ -2,10 +2,10 @@
 #define FLOWCORRELATOR_H
 // -*- C++ -*-
 //
-// Package:    FlowCorr/QVectorTreeProducer
+// Package:    FlowCorr/QVectorTreeAnalyzer
 // Class:      FlowCorrelator
 // 
-/**\class FlowCorrelator FlowCorrelator.h FlowCorr/QVectorTreeProducer/interface/FlowCorrelator.h
+/**\class FlowCorrelator FlowCorrelator.h FlowCorr/QVectorTreeAnalyzer/interface/FlowCorrelator.h
 
  Description: [one line class summary]
 

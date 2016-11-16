@@ -2,7 +2,7 @@
 #define FLOWUTILS_H
 // -*- C++ -*-
 //
-// Package:    FlowCorr/QVectorTreeProducer
+// Package:    FlowCorr/QVectorTreeAnalyzer
 // Class:      FlowUtils
 // 
 /**\class FlowUtils FlowUtils.h FlowCorr/FlowEP/interface/FlowUtils.h

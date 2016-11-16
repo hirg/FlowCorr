@@ -3,7 +3,7 @@
 
 // -*- C++ -*-
 //
-// Package:    FlowCorr/QVectorTreeProducer
+// Package:    FlowCorr/QVectorTreeAnalyzer
 // Class:      FlowEventSelection
 // 
 /**\class FlowEventSelection FlowEventSelection.h FlowCorr/FlowEventSelection/interface/FlowEventSelection.h

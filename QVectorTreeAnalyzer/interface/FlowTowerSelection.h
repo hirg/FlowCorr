@@ -3,7 +3,7 @@
 
 // -*- C++ -*-
 //
-// Package:    FlowCorr/QVectorTreeProducer
+// Package:    FlowCorr/QVectorTreeAnalyzer
 // Class:      FlowTowerSelection
 // 
 /**\class FlowTowerSelection FlowTowerSelection.h FlowCorr/FlowTowerSelection/interface/FlowTowerSelection.h
@@ -27,7 +27,7 @@
 #include "DataFormats/CaloTowers/interface/CaloTower.h"
 #include "DataFormats/CaloTowers/interface/CaloTowerFwd.h"
 
-#include "FlowCorr/QVectorTreeProducer/interface/FlowUtils.h"
+#include "FlowCorr/QVectorTreeAnalyzer/interface/FlowUtils.h"
 
 //
 // Type def

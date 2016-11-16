@@ -3,7 +3,7 @@
 
 // -*- C++ -*-
 //
-// Package:    FlowCorr/QVectorTreeProducer
+// Package:    FlowCorr/QVectorTreeAnalyzer
 // Class:      FlowTrackSelection
 // 
 /**\class FlowTrackSelection FlowTrackSelection.h FlowCorr/FlowTrackSelection/interface/FlowTrackSelection.h
@@ -27,7 +27,7 @@
 #include "DataFormats/TrackReco/interface/Track.h"
 #include "DataFormats/TrackReco/interface/TrackFwd.h"
 
-#include "FlowCorr/QVectorTreeProducer/interface/FlowUtils.h"
+#include "FlowCorr/QVectorTreeAnalyzer/interface/FlowUtils.h"
 
 //
 // Type def

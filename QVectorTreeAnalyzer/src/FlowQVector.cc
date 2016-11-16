@@ -22,7 +22,7 @@
 #include <algorithm> 
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
-#include "FlowCorr/QVectorTreeProducer/interface/FlowQVector.h"
+#include "FlowCorr/QVectorTreeAnalyzer/interface/FlowQVector.h"
 
 FlowQVector::FlowQVector() :
 qv(std::vector< std::complex<double> >(1, std::complex<double>(0.,0.)))

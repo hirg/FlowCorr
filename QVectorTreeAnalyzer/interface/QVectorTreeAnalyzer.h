@@ -1,9 +1,9 @@
 // -*- C++ -*-
 //
-// Package:    FlowCorr/QVectorTreeProducer
-// Class:      QVectorTreeProducer
+// Package:    FlowCorr/QVectorTreeAnalyzer
+// Class:      QVectorTreeAnalyzer
 // 
-/**\class QVectorTreeProducer QVectorTreeProducer.h FlowCorr/QVectorTreeProducer/interface/QVectorTreeProducer.h
+/**\class QVectorTreeAnalyzer QVectorTreeAnalyzer.h FlowCorr/QVectorTreeAnalyzer/interface/QVectorTreeAnalyzer.h
 
  Description: [one line class summary]
 
@@ -48,17 +48,17 @@
 #include <TFile.h>
 #include <TH2D.h>
 
-#include <FlowCorr/QVectorTreeProducer/interface/FlowCorrelator.h>
-#include <FlowCorr/QVectorTreeProducer/interface/FlowUtils.h>
-#include <FlowCorr/QVectorTreeProducer/interface/FlowQVector.h>
-#include <FlowCorr/QVectorTreeProducer/interface/FlowTrackSelection.h>
-#include <FlowCorr/QVectorTreeProducer/interface/FlowTowerSelection.h>
-#include <FlowCorr/QVectorTreeProducer/interface/correlations/Types.hh>
-#include <FlowCorr/QVectorTreeProducer/interface/correlations/Result.hh>
-#include <FlowCorr/QVectorTreeProducer/interface/correlations/QVector.hh>
-#include <FlowCorr/QVectorTreeProducer/interface/correlations/FromQVector.hh>
-#include <FlowCorr/QVectorTreeProducer/interface/correlations/recursive/FromQVector.hh>
-#include <FlowCorr/QVectorTreeProducer/interface/correlations/recurrence/FromQVector.hh>
+#include <FlowCorr/QVectorTreeAnalyzer/interface/FlowCorrelator.h>
+#include <FlowCorr/QVectorTreeAnalyzer/interface/FlowUtils.h>
+#include <FlowCorr/QVectorTreeAnalyzer/interface/FlowQVector.h>
+#include <FlowCorr/QVectorTreeAnalyzer/interface/FlowTrackSelection.h>
+#include <FlowCorr/QVectorTreeAnalyzer/interface/FlowTowerSelection.h>
+#include <FlowCorr/QVectorTreeAnalyzer/interface/correlations/Types.hh>
+#include <FlowCorr/QVectorTreeAnalyzer/interface/correlations/Result.hh>
+#include <FlowCorr/QVectorTreeAnalyzer/interface/correlations/QVector.hh>
+#include <FlowCorr/QVectorTreeAnalyzer/interface/correlations/FromQVector.hh>
+#include <FlowCorr/QVectorTreeAnalyzer/interface/correlations/recursive/FromQVector.hh>
+#include <FlowCorr/QVectorTreeAnalyzer/interface/correlations/recurrence/FromQVector.hh>
 
 //
 // typedef
@@ -74,10 +74,10 @@
 // constructor "usesResource("TFileService");"
 // This will improve performance in multithreaded jobs.
 
-class QVectorTreeProducer : public edm::one::EDAnalyzer<>  {
+class QVectorTreeAnalyzer : public edm::one::EDAnalyzer<>  {
    public:
-      explicit QVectorTreeProducer(const edm::ParameterSet&);
-      ~QVectorTreeProducer();
+      explicit QVectorTreeAnalyzer(const edm::ParameterSet&);
+      ~QVectorTreeAnalyzer();
 
       static void fillDescriptions(edm::ConfigurationDescriptions& descriptions);
 

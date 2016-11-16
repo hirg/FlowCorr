@@ -24,8 +24,8 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see http://www.gnu.org/licenses.
  */
-#include <FlowCorr/QVectorTreeProducer/interface/correlations/QVector.hh>
-#include <FlowCorr/QVectorTreeProducer/interface/correlations/Correlator.hh>
+#include <FlowCorr/QVectorTreeAnalyzer/interface/correlations/QVector.hh>
+#include <FlowCorr/QVectorTreeAnalyzer/interface/correlations/Correlator.hh>
 
 
 namespace correlations {

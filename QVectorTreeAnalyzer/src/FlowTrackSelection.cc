@@ -1,6 +1,6 @@
 // -*- C++ -*-
 //
-// Package:    FlowCorr/QVectorTreeProducer
+// Package:    FlowCorr/QVectorTreeAnalyzer
 // Class:      FlowTrackSelection
 // 
 /**\class FlowTrackSelection FlowTrackSelection.cc FlowCorr/FlowTrackSelection/src/FlowTrackSelection.cc
@@ -18,7 +18,7 @@
 
 
 // system include files
-#include "FlowCorr/QVectorTreeProducer/interface/FlowTrackSelection.h"
+#include "FlowCorr/QVectorTreeAnalyzer/interface/FlowTrackSelection.h"
 
 FlowTrackSelection::FlowTrackSelection()
 {

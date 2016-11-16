@@ -25,7 +25,7 @@
  * along with this program.  If not, see http://www.gnu.org/licenses.
  */
 #include <cmath>
-#include <FlowCorr/QVectorTreeProducer/correlations/Correlator.hh>
+#include <FlowCorr/QVectorTreeAnalyzer/correlations/Correlator.hh>
 
 namespace correlations {
   //____________________________________________________________________

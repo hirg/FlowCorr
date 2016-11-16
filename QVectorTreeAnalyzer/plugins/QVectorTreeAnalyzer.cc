@@ -1,9 +1,9 @@
 // -*- C++ -*-
 //
-// Package:    FlowCorr/QVectorTreeProducer
-// Class:      QVectorTreeProducer
+// Package:    FlowCorr/QVectorTreeAnalyzer
+// Class:      QVectorTreeAnalyzer
 // 
-/**\class QVectorTreeProducer QVectorTreeProducer.cc FlowCorr/QVectorTreeProducer/plugins/QVectorTreeProducer.cc
+/**\class QVectorTreeAnalyzer QVectorTreeAnalyzer.cc FlowCorr/QVectorTreeAnalyzer/plugins/QVectorTreeAnalyzer.cc
 
  Description: [one line class summary]
 
@@ -26,11 +26,11 @@
 
 #include "FWCore/MessageLogger/interface/MessageLogger.h"
 
-#include "FlowCorr/QVectorTreeProducer/interface/QVectorTreeProducer.h"
+#include "FlowCorr/QVectorTreeAnalyzer/interface/QVectorTreeAnalyzer.h"
 
 #include <TString.h>
 
-QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
+QVectorTreeAnalyzer::QVectorTreeAnalyzer(const edm::ParameterSet& iConfig) :
 // #Tracks
    trackToken_(consumes<reco::TrackCollection>(iConfig.getParameter<edm::InputTag>("tracks"))),
    trackQualityTag_(iConfig.getUntrackedParameter<std::string>("trackQuality","highPurity")),
@@ -127,7 +127,7 @@ QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
 
    if(cWeight_ && !filename.IsNull())
    {
-      edm::FileInPath fip(Form("FlowCorr/QVectorTreeProducer/data/%s",filename.Data()));
+      edm::FileInPath fip(Form("FlowCorr/QVectorTreeAnalyzer/data/%s",filename.Data()));
       fEff_ = new TFile(fip.fullPath().c_str(),"READ");
 
       for(int ihist = 0; ihist < fEff_->GetNkeys(); ++ihist)
@@ -263,7 +263,7 @@ QVectorTreeProducer::QVectorTreeProducer(const edm::ParameterSet& iConfig) :
    }
 }
 
-QVectorTreeProducer::~QVectorTreeProducer()
+QVectorTreeAnalyzer::~QVectorTreeAnalyzer()
 {
    // do anything here that needs to be done at desctruction time
    // (e.g. close files, deallocate resources etc.)
@@ -328,7 +328,7 @@ QVectorTreeProducer::~QVectorTreeProducer()
 
 // ------------ method called for each event  ------------
 void
-QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
+QVectorTreeAnalyzer::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
 {
    //----- General informations -----
    Evt_.run   = iEvent.id().run();
@@ -472,19 +472,19 @@ QVectorTreeProducer::analyze(const edm::Event& iEvent, const edm::EventSetup& iS
 
 // ------------ method called once each job just before starting event loop  ------------
 void 
-QVectorTreeProducer::beginJob()
+QVectorTreeAnalyzer::beginJob()
 {
 }
 
 // ------------ method called once each job just after ending the event loop  ------------
 void 
-QVectorTreeProducer::endJob() 
+QVectorTreeAnalyzer::endJob() 
 {
 }
 
 // ------------ method fills 'descriptions' with the allowed parameters for the module  ------------
 void
-QVectorTreeProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) 
+QVectorTreeAnalyzer::fillDescriptions(edm::ConfigurationDescriptions& descriptions) 
 {
   //The following says we do not know what parameters are allowed so do no validation
   // Please change this to state exactly what you do use, even if it is no parameters
@@ -495,7 +495,7 @@ QVectorTreeProducer::fillDescriptions(edm::ConfigurationDescriptions& descriptio
 
 // ------------ Other methods ------------
 bool
-QVectorTreeProducer::isEventSelected(const edm::Event& iEvent, 
+QVectorTreeAnalyzer::isEventSelected(const edm::Event& iEvent, 
                                      edm::Handle< reco::VertexCollection > vertices,
                                      edm::Handle< reco::TrackCollection >  tracks) 
 {
@@ -545,7 +545,7 @@ QVectorTreeProducer::isEventSelected(const edm::Event& iEvent,
 }
 
 void 
-QVectorTreeProducer::getNoff(edm::Handle< reco::TrackCollection > tracks)
+QVectorTreeAnalyzer::getNoff(edm::Handle< reco::TrackCollection > tracks)
 {
    nOff_ = 0;
    nOffcorr_ = 0.;
@@ -571,7 +571,7 @@ QVectorTreeProducer::getNoff(edm::Handle< reco::TrackCollection > tracks)
 }
 
 void
-QVectorTreeProducer::initDiagQ()
+QVectorTreeAnalyzer::initDiagQ()
 {
    cqNvec_.resize(nHarmTrk_);
    for(unsigned int iharm = 0; iharm < nHarmTrk_; ++iharm)
@@ -596,7 +596,7 @@ QVectorTreeProducer::initDiagQ()
 }
 
 void
-QVectorTreeProducer::initNonDiagQ()
+QVectorTreeAnalyzer::initNonDiagQ()
 {
    cqNMvec_.resize(nHarmTrk_-1);
    hcNMvec_.resize(nHarmTrk_-1);
@@ -625,7 +625,7 @@ QVectorTreeProducer::initNonDiagQ()
 }
 
 void
-QVectorTreeProducer::doneDiagQ()
+QVectorTreeAnalyzer::doneDiagQ()
 {
    for(unsigned int iharm = 0; iharm < nHarmTrk_; ++iharm)
    {
@@ -636,7 +636,7 @@ QVectorTreeProducer::doneDiagQ()
 }
 
 void
-QVectorTreeProducer::doneNonDiagQ()
+QVectorTreeAnalyzer::doneNonDiagQ()
 {
    for(unsigned int iharm = 0; iharm < nHarmTrk_-1; ++iharm)
    {
@@ -651,7 +651,7 @@ QVectorTreeProducer::doneNonDiagQ()
 }
 
 void
-QVectorTreeProducer::resetQvectors()
+QVectorTreeAnalyzer::resetQvectors()
 {
    for(unsigned int ieta = 0; ieta < nEtaBinTrk_; ++ieta)
    {
@@ -666,7 +666,7 @@ QVectorTreeProducer::resetQvectors()
 }
 
 double
-QVectorTreeProducer::getAccEffWeight(double eta, double pt)
+QVectorTreeAnalyzer::getAccEffWeight(double eta, double pt)
 {
    double weight = 1.;
    if(hEff_.size() != effCentBin_.size() - 1 || effCentBin_.empty())
@@ -693,7 +693,7 @@ QVectorTreeProducer::getAccEffWeight(double eta, double pt)
 }
 
 void
-QVectorTreeProducer::fillHistoTrk(double weight)
+QVectorTreeAnalyzer::fillHistoTrk(double weight)
 {
    htrk_eta_ref_->Fill(trkSelectorRef_.getTrk().eta);
    htrk_phi_ref_->Fill(trkSelectorRef_.getTrk().phi);
@@ -735,7 +735,7 @@ QVectorTreeProducer::fillHistoTrk(double weight)
 }
 
 void
-QVectorTreeProducer::fillHistoHF()
+QVectorTreeAnalyzer::fillHistoHF()
 {
    hHF_eta_tow_ ->Fill(towSelector_.getTower().eta);
    hHF_et_tow_  ->Fill(towSelector_.getTower().et);
@@ -747,7 +747,7 @@ QVectorTreeProducer::fillHistoHF()
 }
 
 void
-QVectorTreeProducer::fillQVectorCorr(double weight)
+QVectorTreeAnalyzer::fillQVectorCorr(double weight)
 {
       for(unsigned int iharm = 0; iharm < nHarmTrk_; ++iharm)
       {
@@ -762,7 +762,7 @@ QVectorTreeProducer::fillQVectorCorr(double weight)
 }
 
 void
-QVectorTreeProducer::fillQVectorTrk(double weight)
+QVectorTreeAnalyzer::fillQVectorTrk(double weight)
 {
       int etaIdx = -1;
       for(unsigned int ieta = 0; ieta < nEtaBinTrk_; ++ieta)
@@ -795,7 +795,7 @@ QVectorTreeProducer::fillQVectorTrk(double weight)
 }
 
 void
-QVectorTreeProducer::fillQVectorHF(double weight, double eta, double phi)
+QVectorTreeAnalyzer::fillQVectorHF(double weight, double eta, double phi)
 {
       int etaIdx = -1;
       for(unsigned int ieta = 0; ieta < nEtaBinHF_; ++ieta)
@@ -828,7 +828,7 @@ QVectorTreeProducer::fillQVectorHF(double weight, double eta, double phi)
 }
 
 void
-QVectorTreeProducer::fillCorrelators()
+QVectorTreeAnalyzer::fillCorrelators()
 {
    //-- Diagonal
    correlations::Result rN2; 
@@ -876,7 +876,7 @@ QVectorTreeProducer::fillCorrelators()
 }
 
 void 
-QVectorTreeProducer::fillEPangle(const edm::Handle<reco::EvtPlaneCollection> & ep)
+QVectorTreeAnalyzer::fillEPangle(const edm::Handle<reco::EvtPlaneCollection> & ep)
 {
    //----- Event Plane selection ----
    //Index     Name   Detector Order hmin1 hmax1 hmin2 hmax2 minpt maxpt
@@ -929,4 +929,4 @@ QVectorTreeProducer::fillEPangle(const edm::Handle<reco::EvtPlaneCollection> & e
 
 
 //define this as a plug-in
-DEFINE_FWK_MODULE(QVectorTreeProducer);
+DEFINE_FWK_MODULE(QVectorTreeAnalyzer);

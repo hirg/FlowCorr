@@ -1,6 +1,6 @@
 // -*- C++ -*-
 //
-// Package:    FlowCorr/QVectorTreeProducer
+// Package:    FlowCorr/QVectorTreeAnalyzer
 // Class:      FlowTowerSelection
 // 
 /**\class FlowTowerSelection FlowTowerSelection.cc FlowCorr/FlowTowerSelection/src/FlowTowerSelection.cc
@@ -18,7 +18,7 @@
 
 
 // system include files
-#include "FlowCorr/QVectorTreeProducer/interface/FlowTowerSelection.h"
+#include "FlowCorr/QVectorTreeAnalyzer/interface/FlowTowerSelection.h"
 
 FlowTowerSelection::FlowTowerSelection()
 {

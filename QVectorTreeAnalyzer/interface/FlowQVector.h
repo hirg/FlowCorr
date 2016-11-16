@@ -2,10 +2,10 @@
 #define FLOWQVECTOR_H
 // -*- C++ -*-
 //
-// Package:    FlowCorr/QVectorTreeProducer
+// Package:    FlowCorr/QVectorTreeAnalyzer
 // Class:      FlowQVector
 // 
-/**\class FlowQVector FlowQVector.h FlowCorr/QVectorTreeProducer/interface/FlowQVector.h
+/**\class FlowQVector FlowQVector.h FlowCorr/QVectorTreeAnalyzer/interface/FlowQVector.h
 
  Description: [one line class summary]
 

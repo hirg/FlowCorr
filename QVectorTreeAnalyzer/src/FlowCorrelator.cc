@@ -18,7 +18,7 @@
 
 
 // system include files
-#include "FlowCorr/QVectorTreeProducer/interface/FlowCorrelator.h"
+#include "FlowCorr/QVectorTreeAnalyzer/interface/FlowCorrelator.h"
 
 FlowCorrelator::FlowCorrelator() :
 corr(std::vector< std::complex<double> >(1, std::complex<double>(0.,0.))),
